@@ -1,7 +1,6 @@
 from fastapi.testclient import TestClient
 
 PLACEHOLDER_PATHS = (
-    "/categories",
     "/suppliers",
     "/settings",
 )
@@ -95,5 +94,12 @@ def test_pages_have_no_legacy_branding(client: TestClient) -> None:
 def test_pages_are_excluded_from_openapi(client: TestClient) -> None:
     paths = client.get("/openapi.json").json()["paths"]
 
-    for path in ("/", "/dashboard", "/products", "/movements", *PLACEHOLDER_PATHS):
+    for path in (
+        "/",
+        "/dashboard",
+        "/products",
+        "/movements",
+        "/categories",
+        *PLACEHOLDER_PATHS,
+    ):
         assert path not in paths

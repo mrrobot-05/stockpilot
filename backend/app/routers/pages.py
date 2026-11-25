@@ -17,8 +17,14 @@ from sqlalchemy.orm import Session
 from starlette.templating import Jinja2Templates
 
 from app.db.session import get_db
-from app.models import MovementType, Product
-from app.schemas import MovementCreate, ProductCreate, ProductUpdate
+from app.models import Category, MovementType, Product
+from app.schemas import (
+    CategoryCreate,
+    CategoryUpdate,
+    MovementCreate,
+    ProductCreate,
+    ProductUpdate,
+)
 from app.services import categories as category_service
 from app.services import movements as movement_service
 from app.services import products as product_service
@@ -380,6 +386,81 @@ def movement_form(
     }
 
 
+DEFAULT_CATEGORY_FORM_VALUES: dict[str, object] = {"name": "", "description": ""}
+
+
+def _categories_url(q: str = "") -> str:
+    return "/categories?" + urlencode({"q": q}) if q.strip() else "/categories"
+
+
+def _category_table_context(db: Session, *, q: str = "") -> dict:
+    rows = category_service.list_categories(db, q=q.strip() or None)
+    return {
+        "categories": rows,
+        "total": len(rows),
+        "q": q.strip(),
+        "url": partial(_categories_url, q=q.strip()),
+    }
+
+
+def _category_table_response(request: Request, db: Session, message: str) -> HTMLResponse:
+    headers = {
+        "HX-Retarget": "#category-table",
+        "HX-Reswap": "outerHTML",
+        "HX-Trigger": json.dumps(
+            {
+                "closeModal": "",
+                "showToast": {"message": message, "type": "success"},
+            }
+        ),
+    }
+    return templates.TemplateResponse(
+        request,
+        "partials/_category_table.html",
+        _category_table_context(db),
+        headers=headers,
+    )
+
+
+def _form_values_from_category(category: Category) -> dict[str, object]:
+    return {"name": category.name, "description": category.description or ""}
+
+
+def _category_form_context(
+    values: dict[str, object],
+    *,
+    category_id: int | None = None,
+    error: str | None = None,
+) -> dict:
+    editing = category_id is not None
+    return {
+        "values": values,
+        "error": error,
+        "category_id": category_id,
+        "is_edit": editing,
+        "modal_title": "Edit category" if editing else "Add category",
+        "form_action": (
+            f"/categories/{category_id}/edit" if editing else "/categories"
+        ),
+    }
+
+
+def category_form(
+    name: str = Form(""), description: str = Form("")
+) -> dict[str, str]:
+    """Collect the category modal fields."""
+    return {"name": name, "description": description}
+
+
+def _category_not_found(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request,
+        "not_found.html",
+        {"page_title": "Category not found", "message": "That category does not exist."},
+        status_code=404,
+    )
+
+
 @router.get("/", include_in_schema=False)
 def root() -> RedirectResponse:
     return RedirectResponse(url="/dashboard", status_code=307)
@@ -701,6 +782,158 @@ def create_movement_submit(
     )
 
 
+@router.get("/categories", response_class=HTMLResponse, include_in_schema=False)
+def categories_page(
+    request: Request, q: str | None = None, db: Session = Depends(get_db)
+) -> HTMLResponse:
+    context = _category_table_context(db, q=q or "")
+    context["page_title"] = "Categories"
+    template = (
+        "partials/_category_table.html"
+        if request.headers.get("hx-request", "").lower() == "true"
+        else "categories.html"
+    )
+    return templates.TemplateResponse(request, template, context)
+
+
+@router.get("/categories/new", response_class=HTMLResponse, include_in_schema=False)
+def new_category_modal(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request,
+        "partials/_category_form.html",
+        _category_form_context(DEFAULT_CATEGORY_FORM_VALUES.copy()),
+    )
+
+
+@router.post("/categories", response_class=HTMLResponse, include_in_schema=False)
+def create_category_submit(
+    request: Request,
+    form: dict[str, str] = Depends(category_form),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    values: dict[str, object] = {
+        "name": form["name"].strip(),
+        "description": form["description"].strip(),
+    }
+    try:
+        category = category_service.create_category(
+            db,
+            CategoryCreate(name=str(values["name"]), description=str(values["description"]) or None),
+        )
+    except (ValidationError, HTTPException) as exc:
+        return templates.TemplateResponse(
+            request,
+            "partials/_category_form.html",
+            _category_form_context(values, error=_form_error(exc)),
+        )
+    return _category_table_response(request, db, f"{category.name} added.")
+
+
+@router.get(
+    "/categories/{category_id}/edit", response_class=HTMLResponse, include_in_schema=False
+)
+def edit_category_modal(
+    request: Request, category_id: int, db: Session = Depends(get_db)
+) -> HTMLResponse:
+    try:
+        category = category_service.get_category(db, category_id)
+    except HTTPException as exc:
+        if exc.status_code != 404:
+            raise
+        return _category_not_found(request)
+    return templates.TemplateResponse(
+        request,
+        "partials/_category_form.html",
+        _category_form_context(
+            _form_values_from_category(category), category_id=category_id
+        ),
+    )
+
+
+@router.post(
+    "/categories/{category_id}/edit", response_class=HTMLResponse, include_in_schema=False
+)
+def edit_category_submit(
+    request: Request,
+    category_id: int,
+    form: dict[str, str] = Depends(category_form),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    values: dict[str, object] = {
+        "name": form["name"].strip(),
+        "description": form["description"].strip(),
+    }
+    try:
+        category_service.update_category(
+            db,
+            category_id,
+            CategoryUpdate(
+                name=str(values["name"]), description=str(values["description"]) or None
+            ),
+        )
+    except (ValidationError, HTTPException) as exc:
+        return templates.TemplateResponse(
+            request,
+            "partials/_category_form.html",
+            _category_form_context(
+                values, category_id=category_id, error=_form_error(exc)
+            ),
+        )
+    return _category_table_response(request, db, "Category updated.")
+
+
+@router.get(
+    "/categories/{category_id}/delete", response_class=HTMLResponse, include_in_schema=False
+)
+def delete_category_modal(
+    request: Request, category_id: int, db: Session = Depends(get_db)
+) -> HTMLResponse:
+    try:
+        category = category_service.get_category(db, category_id)
+    except HTTPException as exc:
+        if exc.status_code != 404:
+            raise
+        return _category_not_found(request)
+    count = next(
+        (n for item, n in category_service.list_categories(db) if item.id == category_id),
+        0,
+    )
+    return templates.TemplateResponse(
+        request,
+        "partials/_category_delete.html",
+        {"category": category, "category_id": category_id, "product_count": count, "error": None},
+    )
+
+
+@router.post(
+    "/categories/{category_id}/delete", response_class=HTMLResponse, include_in_schema=False
+)
+def delete_category_submit(
+    request: Request, category_id: int, db: Session = Depends(get_db)
+) -> HTMLResponse:
+    try:
+        category_service.delete_category(db, category_id)
+    except HTTPException as exc:
+        if exc.status_code == 404:
+            return _category_not_found(request)
+        category = category_service.get_category(db, category_id)
+        count = next(
+            (n for item, n in category_service.list_categories(db) if item.id == category_id),
+            0,
+        )
+        return templates.TemplateResponse(
+            request,
+            "partials/_category_delete.html",
+            {
+                "category": category,
+                "category_id": category_id,
+                "product_count": count,
+                "error": _form_error(exc),
+            },
+        )
+    return _category_table_response(request, db, "Category deleted.")
+
+
 def _placeholder_page(title: str, icon: str) -> Callable[..., HTMLResponse]:
     def page(request: Request) -> HTMLResponse:
         return templates.TemplateResponse(
@@ -713,7 +946,6 @@ def _placeholder_page(title: str, icon: str) -> Callable[..., HTMLResponse]:
 
 
 PLACEHOLDERS: tuple[tuple[str, str, str], ...] = (
-    ("/categories", "Categories", "bi-tags"),
     ("/suppliers", "Suppliers", "bi-truck"),
     ("/settings", "Settings", "bi-gear"),
 )

@@ -1,0 +1,43 @@
+<div
+  class="modal fade"
+  id="categoryDeleteModal"
+  tabindex="-1"
+  aria-labelledby="categoryDeleteModalTitle"
+  aria-modal="true"
+  role="dialog"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h5" id="categoryDeleteModalTitle">Delete category</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        {% if error %}
+          <div class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>{{ error }}
+          </div>
+        {% endif %}
+        <p class="mb-2">
+          Delete <strong>{{ category.name }}</strong>?
+        </p>
+        <p class="small text-body-secondary mb-0">
+          {% if product_count %}
+            {{ product_count }} product{{ '' if product_count == 1 else 's' }} in this category
+            will stay in the catalogue with no category assigned.
+          {% else %}
+            This category has no products assigned.
+          {% endif %}
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form hx-post="/categories/{{ category_id }}/delete" hx-target="#modal-root" hx-swap="innerHTML">
+          <button type="submit" class="btn btn-danger">
+            <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete category
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

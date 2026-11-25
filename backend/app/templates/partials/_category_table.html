@@ -1,0 +1,54 @@
+<div id="category-table" class="card sp-card">
+  <div class="card-header sp-card-header d-flex justify-content-between align-items-center gap-2">
+    <h2 class="h6 mb-0">Category list</h2>
+    <span class="text-body-secondary small">{{ total }} found</span>
+  </div>
+
+  {% if categories %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle sp-table mb-0">
+        <caption class="visually-hidden">Categories matching the current search</caption>
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Description</th>
+            <th scope="col" class="text-end">Products</th>
+            <th scope="col" class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for category, product_count in categories %}
+            <tr>
+              <td class="fw-semibold">{{ category.name }}</td>
+              <td class="small text-body-secondary">
+                {{ category.description or '—' }}
+              </td>
+              <td class="text-end oc-num">
+                <a href="/products?category_id={{ category.id }}">{{ product_count }}</a>
+              </td>
+              <td class="text-end">
+                <div class="btn-group btn-group-sm" role="group" aria-label="Actions for {{ category.name }}">
+                  <button type="button" class="btn btn-outline-secondary"
+                    hx-get="/categories/{{ category.id }}/edit"
+                    hx-target="#modal-root"
+                    hx-swap="innerHTML"
+                    aria-label="Edit {{ category.name }}">Edit</button>
+                  <button type="button" class="btn btn-outline-danger"
+                    hx-get="/categories/{{ category.id }}/delete"
+                    hx-target="#modal-root"
+                    hx-swap="innerHTML"
+                    aria-label="Delete {{ category.name }}">Delete</button>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="sp-mini-empty text-center text-body-secondary">
+      <i class="bi bi-tags d-block fs-3 mb-2" aria-hidden="true"></i>
+      No categories match your search.
+    </div>
+  {% endif %}
+</div>
