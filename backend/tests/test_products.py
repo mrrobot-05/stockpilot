@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+import pytest
 from fastapi.testclient import TestClient
 
 
@@ -31,8 +32,10 @@ def test_create_product(client: TestClient) -> None:
     assert created["sku"] == "SKU-1"
     assert created["name"] == "Widget"
     assert created["description"] == "A useful widget"
-    assert Decimal(created["cost_price"]) == Decimal("3.50")
-    assert Decimal(created["sell_price"]) == Decimal("9.99")
+    assert isinstance(created["cost_price"], float)
+    assert isinstance(created["sell_price"], float)
+    assert Decimal(str(created["cost_price"])) == Decimal("3.50")
+    assert Decimal(str(created["sell_price"])) == Decimal("9.99")
     assert created["quantity"] == 4
     assert created["reorder_level"] == 2
     assert created["is_active"] is True
@@ -43,8 +46,10 @@ def test_create_product_defaults(client: TestClient) -> None:
     created = make_product(client)
 
     assert created["description"] is None
-    assert Decimal(created["cost_price"]) == 0
-    assert Decimal(created["sell_price"]) == 0
+    assert isinstance(created["cost_price"], float)
+    assert isinstance(created["sell_price"], float)
+    assert Decimal(str(created["cost_price"])) == 0
+    assert Decimal(str(created["sell_price"])) == 0
     assert created["quantity"] == 0
     assert created["reorder_level"] == 0
     assert created["is_active"] is True
@@ -84,6 +89,10 @@ def test_list_paginated(client: TestClient) -> None:
     assert body["pages"] == 2
     assert len(body["items"]) == 1
     assert body["items"][0]["sku"] == "SKU-2"
+    assert isinstance(body["items"][0]["cost_price"], float)
+    assert isinstance(body["items"][0]["sell_price"], float)
+    assert Decimal(str(body["items"][0]["cost_price"])) == 0
+    assert Decimal(str(body["items"][0]["sell_price"])) == 0
 
 
 def test_search_by_name_and_sku(client: TestClient) -> None:
@@ -130,7 +139,12 @@ def test_get_product(client: TestClient) -> None:
     response = client.get(f"/api/products/{created['id']}")
 
     assert response.status_code == 200
-    assert response.json()["sku"] == "SKU-1"
+    body = response.json()
+    assert body["sku"] == "SKU-1"
+    assert isinstance(body["cost_price"], float)
+    assert isinstance(body["sell_price"], float)
+    assert Decimal(str(body["cost_price"])) == 0
+    assert Decimal(str(body["sell_price"])) == 0
 
 
 def test_get_product_not_found(client: TestClient) -> None:
@@ -203,3 +217,107 @@ def test_validation_page_size_too_large(client: TestClient) -> None:
     response = client.get("/api/products", params={"page_size": 101})
 
     assert response.status_code == 422
+
+
+def test_duplicate_sku_integrity_error_returns_409(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    make_product(client, sku="UNIQUE-1")
+    monkeypatch.setattr(
+        "app.services.products._ensure_unique_sku",
+        lambda *args, **kwargs: None,
+    )
+
+    response = client.post("/api/products", json={"sku": "UNIQUE-1", "name": "Other"})
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "A product with this SKU already exists"
+
+
+@pytest.mark.parametrize(
+    ("field", "length"),
+    [("sku", 65), ("name", 201), ("description", 2001)],
+)
+def test_create_rejects_overlong_fields(
+    client: TestClient, field: str, length: int
+) -> None:
+    payload = {"sku": "SKU-1", "name": "Widget", field: "x" * length}
+
+    response = client.post("/api/products", json=payload)
+
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("field", "length"),
+    [("sku", 65), ("name", 201), ("description", 2001)],
+)
+def test_update_rejects_overlong_fields(
+    client: TestClient, field: str, length: int
+) -> None:
+    created = make_product(client)
+
+    response = client.patch(
+        f"/api/products/{created['id']}", json={field: "x" * length}
+    )
+
+    assert response.status_code == 422
+
+
+def test_search_escapes_percent_wildcard(client: TestClient) -> None:
+    make_product(client, sku="SKU-P", name="100% Cotton")
+    make_product(client, sku="SKU-X", name="100X Cotton")
+
+    response = client.get("/api/products", params={"q": "100%"})
+
+    assert response.status_code == 200
+    assert [item["sku"] for item in response.json()["items"]] == ["SKU-P"]
+
+
+def test_search_escapes_underscore_wildcard(client: TestClient) -> None:
+    make_product(client, sku="SKU-U", name="A_B")
+    make_product(client, sku="SKU-X", name="AXB")
+
+    response = client.get("/api/products", params={"q": "A_B"})
+
+    assert response.status_code == 200
+    assert [item["sku"] for item in response.json()["items"]] == ["SKU-U"]
+
+
+@pytest.mark.parametrize("page", [0, -1])
+def test_invalid_page(client: TestClient, page: int) -> None:
+    response = client.get("/api/products", params={"page": page})
+
+    assert response.status_code == 422
+
+
+def test_low_stock_includes_equal_threshold(client: TestClient) -> None:
+    make_product(client, sku="SKU-EQ", name="Equal", quantity=5, reorder_level=5)
+    make_product(client, sku="SKU-OK", name="Ok", quantity=6, reorder_level=5)
+
+    response = client.get("/api/products", params={"low_stock": "true"})
+
+    assert [item["sku"] for item in response.json()["items"]] == ["SKU-EQ"]
+
+
+def test_patch_description_null_clears(client: TestClient) -> None:
+    created = make_product(client, description="Original description")
+
+    response = client.patch(
+        f"/api/products/{created['id']}", json={"description": None}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["description"] is None
+    assert client.get(f"/api/products/{created['id']}").json()["description"] is None
+
+
+@pytest.mark.parametrize(
+    "sort",
+    ["id", "sku", "name", "quantity", "sell_price", "created_at"],
+)
+def test_all_sort_keys(client: TestClient, sort: str) -> None:
+    make_product(client, sku="SKU-1", name="Widget", quantity=2)
+
+    assert client.get("/api/products", params={"sort": sort}).status_code == 200
+    assert client.get("/api/products", params={"sort": f"-{sort}"}).status_code == 200

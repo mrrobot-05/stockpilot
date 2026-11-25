@@ -10,7 +10,7 @@ from app.db.base import Base
 class Product(Base):
     __tablename__ = "products"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     sku: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(String(2000), nullable=True)

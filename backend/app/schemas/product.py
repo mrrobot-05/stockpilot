@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 
 class _ProductValidators(BaseModel):
@@ -57,9 +57,9 @@ class _ProductValidators(BaseModel):
 
 
 class ProductBase(_ProductValidators):
-    sku: str
-    name: str
-    description: str | None = None
+    sku: str = Field(max_length=64)
+    name: str = Field(max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
     cost_price: Decimal = Decimal("0")
     sell_price: Decimal = Decimal("0")
     quantity: int = 0
@@ -74,9 +74,9 @@ class ProductCreate(ProductBase):
 class ProductUpdate(_ProductValidators):
     """Payload for partially updating a product; omitted fields stay unchanged."""
 
-    sku: str | None = None
-    name: str | None = None
-    description: str | None = None
+    sku: str | None = Field(default=None, max_length=64)
+    name: str | None = Field(default=None, max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
     cost_price: Decimal | None = None
     sell_price: Decimal | None = None
     quantity: int | None = None
@@ -98,6 +98,12 @@ class ProductRead(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+
+    # Pydantic v2 uses `when_used="json"` for JSON-only serializers;
+    # `mode` instead selects a plain vs. wrap serializer function.
+    @field_serializer("cost_price", "sell_price", when_used="json")
+    def _money_to_float(self, value: Decimal) -> float:
+        return float(value)
 
 
 class ProductPage(BaseModel):

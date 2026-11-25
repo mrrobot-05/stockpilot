@@ -1,5 +1,6 @@
 from fastapi import HTTPException, status
 from sqlalchemy import func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import Product
@@ -35,6 +36,11 @@ def _ensure_unique_sku(db: Session, sku: str, exclude_id: int | None = None) -> 
         )
 
 
+def _escape_like(value: str) -> str:
+    """Escape LIKE wildcards so user-supplied searches match literally."""
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 def list_products(
     db: Session,
     q: str | None = None,
@@ -46,12 +52,12 @@ def list_products(
     """Return one page of products and the total number of matching rows."""
     stmt = select(Product)
     if q:
-        pattern = f"%{q}%"
+        pattern = f"%{_escape_like(q)}%"
         stmt = stmt.where(
             or_(
-                Product.sku.ilike(pattern),
-                Product.name.ilike(pattern),
-                Product.description.ilike(pattern),
+                Product.sku.ilike(pattern, escape="\\"),
+                Product.name.ilike(pattern, escape="\\"),
+                Product.description.ilike(pattern, escape="\\"),
             )
         )
     if low_stock:
@@ -70,7 +76,13 @@ def create_product(db: Session, payload: ProductCreate) -> Product:
     _ensure_unique_sku(db, payload.sku)
     product = Product(**payload.model_dump())
     db.add(product)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409, detail="A product with this SKU already exists"
+        )
     db.refresh(product)
     return product
 
@@ -91,7 +103,13 @@ def update_product(db: Session, product_id: int, payload: ProductUpdate) -> Prod
         _ensure_unique_sku(db, changes["sku"], exclude_id=product_id)
     for field, value in changes.items():
         setattr(product, field, value)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409, detail="A product with this SKU already exists"
+        )
     db.refresh(product)
     return product
 

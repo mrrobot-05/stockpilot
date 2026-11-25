@@ -16,6 +16,19 @@ copy .env.example .env
 
 On macOS/Linux use `source .venv/bin/activate` and `cp .env.example .env` instead.
 
+## Exact reproduction
+
+`pyproject.toml` intentionally uses open-ended version ranges. For a byte-for-byte
+reproducible environment, install the pinned lock file instead (after creating the venv):
+
+```powershell
+.\.venv\Scripts\python -m pip install -r requirements.lock
+```
+
+`requirements.lock` pins the runtime and dev dependencies that were tested together.
+Regenerate it from an updated environment with
+`pip freeze --exclude-editable > requirements.lock`.
+
 ## Database
 
 The default database is SQLite at `backend/stockpilot.db`. Create/update the schema with Alembic:
