@@ -1,0 +1,64 @@
+<div
+  class="modal fade"
+  id="supplierFormModal"
+  tabindex="-1"
+  aria-labelledby="supplierFormModalTitle"
+  aria-modal="true"
+  role="dialog"
+>
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <form hx-post="{{ form_action }}" hx-target="#modal-root" hx-swap="innerHTML">
+        <div class="modal-header">
+          <h2 class="modal-title h5" id="supplierFormModalTitle">{{ modal_title }}</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          {% if error %}
+            <div class="alert alert-danger" role="alert">
+              <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>{{ error }}
+            </div>
+          {% endif %}
+          <div class="row g-3">
+            <div class="col-12 col-sm-6">
+              <label class="form-label sp-label" for="supplier-form-name">Name *</label>
+              <input class="form-control" id="supplier-form-name" name="name" required
+                maxlength="200" value="{{ values.name or '' }}" />
+            </div>
+            <div class="col-12 col-sm-6">
+              <label class="form-label sp-label" for="supplier-form-contact">Contact name</label>
+              <input class="form-control" id="supplier-form-contact" name="contact_name"
+                maxlength="200" value="{{ values.contact_name or '' }}" />
+            </div>
+            <div class="col-12 col-sm-6">
+              <label class="form-label sp-label" for="supplier-form-email">Email</label>
+              <input class="form-control" type="email" id="supplier-form-email" name="email"
+                maxlength="200" value="{{ values.email or '' }}" />
+            </div>
+            <div class="col-12 col-sm-6">
+              <label class="form-label sp-label" for="supplier-form-phone">Phone</label>
+              <input class="form-control" type="tel" id="supplier-form-phone" name="phone"
+                maxlength="50" value="{{ values.phone or '' }}" />
+            </div>
+            <div class="col-12">
+              <label class="form-label sp-label" for="supplier-form-address">Address</label>
+              <input class="form-control" id="supplier-form-address" name="address"
+                maxlength="500" value="{{ values.address or '' }}" />
+            </div>
+            <div class="col-12">
+              <label class="form-label sp-label" for="supplier-form-notes">Notes</label>
+              <textarea class="form-control" id="supplier-form-notes" name="notes"
+                rows="3" maxlength="1000">{{ values.notes or '' }}</textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check2 me-1" aria-hidden="true"></i>{{ 'Save changes' if is_edit else 'Add supplier' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

@@ -1,6 +1,10 @@
 from fastapi.testclient import TestClient
 
-PLACEHOLDER_PATHS = (
+PAGE_PATHS = (
+    "/dashboard",
+    "/products",
+    "/movements",
+    "/categories",
     "/suppliers",
     "/settings",
 )
@@ -65,14 +69,6 @@ def test_dashboard_shows_low_stock_product_and_movement(client: TestClient) -> N
     assert "Your inventory is ready for takeoff" not in response.text
 
 
-def test_placeholder_pages_render(client: TestClient) -> None:
-    for path in PLACEHOLDER_PATHS:
-        response = client.get(path)
-        assert response.status_code == 200, path
-        assert "This screen arrives in the next implementation step" in response.text
-        assert "/docs" in response.text
-
-
 def test_static_assets_are_served(client: TestClient) -> None:
     css = client.get("/static/css/app.css")
     js = client.get("/static/js/app.js")
@@ -84,7 +80,7 @@ def test_static_assets_are_served(client: TestClient) -> None:
 
 
 def test_pages_have_no_legacy_branding(client: TestClient) -> None:
-    for path in ("/dashboard", *PLACEHOLDER_PATHS):
+    for path in PAGE_PATHS:
         response = client.get(path)
         assert response.status_code == 200
         legacy_brand = "tel" + "usko"
@@ -94,12 +90,5 @@ def test_pages_have_no_legacy_branding(client: TestClient) -> None:
 def test_pages_are_excluded_from_openapi(client: TestClient) -> None:
     paths = client.get("/openapi.json").json()["paths"]
 
-    for path in (
-        "/",
-        "/dashboard",
-        "/products",
-        "/movements",
-        "/categories",
-        *PLACEHOLDER_PATHS,
-    ):
+    for path in ("/", *PAGE_PATHS):
         assert path not in paths

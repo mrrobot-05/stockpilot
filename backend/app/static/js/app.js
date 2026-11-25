@@ -14,9 +14,12 @@
     var dark = currentTheme() === "dark";
     var icon = dark ? "bi-sun" : "bi-moon-stars";
     var label = dark ? "Switch to light mode" : "Switch to dark mode";
-    document.querySelectorAll("#themeToggle").forEach(function (button) {
-      button.innerHTML =
-        '<i class="bi ' + icon + '" aria-hidden="true"></i>';
+    document.querySelectorAll("#themeToggle, [data-theme-toggle]").forEach(function (button) {
+      var iconElement = button.querySelector("i.bi");
+      if (iconElement) {
+        iconElement.classList.remove("bi-moon-stars", "bi-sun");
+        iconElement.classList.add(icon);
+      }
       button.setAttribute("aria-label", label);
       button.setAttribute("aria-pressed", String(dark));
     });
@@ -85,7 +88,7 @@
 
   function init() {
     updateToggleButton();
-    document.querySelectorAll("#themeToggle").forEach(function (button) {
+    document.querySelectorAll("#themeToggle, [data-theme-toggle]").forEach(function (button) {
       button.addEventListener("click", function () {
         setTheme(currentTheme() === "dark" ? "light" : "dark");
       });

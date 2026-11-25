@@ -7,7 +7,6 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from functools import partial
 from pathlib import Path
-from typing import Callable
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
@@ -17,13 +16,15 @@ from sqlalchemy.orm import Session
 from starlette.templating import Jinja2Templates
 
 from app.db.session import get_db
-from app.models import Category, MovementType, Product
+from app.models import Category, MovementType, Product, Supplier
 from app.schemas import (
     CategoryCreate,
     CategoryUpdate,
     MovementCreate,
     ProductCreate,
     ProductUpdate,
+    SupplierCreate,
+    SupplierUpdate,
 )
 from app.services import categories as category_service
 from app.services import movements as movement_service
@@ -457,6 +458,105 @@ def _category_not_found(request: Request) -> HTMLResponse:
         request,
         "not_found.html",
         {"page_title": "Category not found", "message": "That category does not exist."},
+        status_code=404,
+    )
+
+
+DEFAULT_SUPPLIER_FORM_VALUES: dict[str, object] = {
+    "name": "",
+    "contact_name": "",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "notes": "",
+}
+
+
+def _suppliers_url(q: str = "") -> str:
+    return "/suppliers?" + urlencode({"q": q}) if q.strip() else "/suppliers"
+
+
+def _supplier_table_context(db: Session, *, q: str = "") -> dict:
+    rows = supplier_service.list_suppliers(db, q=q.strip() or None)
+    return {
+        "suppliers": rows,
+        "total": len(rows),
+        "q": q.strip(),
+        "url": partial(_suppliers_url, q=q.strip()),
+    }
+
+
+def _supplier_table_response(request: Request, db: Session, message: str) -> HTMLResponse:
+    headers = {
+        "HX-Retarget": "#supplier-table",
+        "HX-Reswap": "outerHTML",
+        "HX-Trigger": json.dumps(
+            {
+                "closeModal": "",
+                "showToast": {"message": message, "type": "success"},
+            }
+        ),
+    }
+    return templates.TemplateResponse(
+        request,
+        "partials/_supplier_table.html",
+        _supplier_table_context(db),
+        headers=headers,
+    )
+
+
+def _form_values_from_supplier(supplier: Supplier) -> dict[str, object]:
+    return {
+        "name": supplier.name,
+        "contact_name": supplier.contact_name or "",
+        "email": supplier.email or "",
+        "phone": supplier.phone or "",
+        "address": supplier.address or "",
+        "notes": supplier.notes or "",
+    }
+
+
+def _supplier_form_context(
+    values: dict[str, object],
+    *,
+    supplier_id: int | None = None,
+    error: str | None = None,
+) -> dict:
+    editing = supplier_id is not None
+    return {
+        "values": values,
+        "error": error,
+        "supplier_id": supplier_id,
+        "is_edit": editing,
+        "modal_title": "Edit supplier" if editing else "Add supplier",
+        "form_action": f"/suppliers/{supplier_id}/edit" if editing else "/suppliers",
+    }
+
+
+def supplier_form(
+    name: str = Form(""),
+    contact_name: str = Form(""),
+    email: str = Form(""),
+    phone: str = Form(""),
+    address: str = Form(""),
+    notes: str = Form(""),
+) -> dict[str, str]:
+    """Collect the supplier modal fields."""
+    return {
+        "name": name,
+        "contact_name": contact_name,
+        "email": email,
+        "phone": phone,
+        "address": address,
+        "notes": notes,
+    }
+
+
+def _supplier_not_found(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request,
+        "not_found.html",
+        {"page_title": "Supplier not found", "message": "That supplier does not exist."},
         status_code=404,
     )
 
@@ -934,28 +1034,145 @@ def delete_category_submit(
     return _category_table_response(request, db, "Category deleted.")
 
 
-def _placeholder_page(title: str, icon: str) -> Callable[..., HTMLResponse]:
-    def page(request: Request) -> HTMLResponse:
+@router.get("/suppliers", response_class=HTMLResponse, include_in_schema=False)
+def suppliers_page(
+    request: Request, q: str | None = None, db: Session = Depends(get_db)
+) -> HTMLResponse:
+    context = _supplier_table_context(db, q=q or "")
+    context["page_title"] = "Suppliers"
+    template = (
+        "partials/_supplier_table.html"
+        if request.headers.get("hx-request", "").lower() == "true"
+        else "suppliers.html"
+    )
+    return templates.TemplateResponse(request, template, context)
+
+
+@router.get("/suppliers/new", response_class=HTMLResponse, include_in_schema=False)
+def new_supplier_modal(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request,
+        "partials/_supplier_form.html",
+        _supplier_form_context(DEFAULT_SUPPLIER_FORM_VALUES.copy()),
+    )
+
+
+@router.post("/suppliers", response_class=HTMLResponse, include_in_schema=False)
+def create_supplier_submit(
+    request: Request,
+    form: dict[str, str] = Depends(supplier_form),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    values: dict[str, object] = {key: form[key].strip() for key in form}
+    try:
+        supplier = supplier_service.create_supplier(db, SupplierCreate(**values))
+    except (ValidationError, HTTPException) as exc:
         return templates.TemplateResponse(
             request,
-            "placeholder.html",
-            {"page_title": title, "page_icon": icon},
+            "partials/_supplier_form.html",
+            _supplier_form_context(values, error=_form_error(exc)),
         )
+    return _supplier_table_response(request, db, f"{supplier.name} added.")
 
-    return page
 
-
-PLACEHOLDERS: tuple[tuple[str, str, str], ...] = (
-    ("/suppliers", "Suppliers", "bi-truck"),
-    ("/settings", "Settings", "bi-gear"),
+@router.get(
+    "/suppliers/{supplier_id}/edit", response_class=HTMLResponse, include_in_schema=False
 )
+def edit_supplier_modal(
+    request: Request, supplier_id: int, db: Session = Depends(get_db)
+) -> HTMLResponse:
+    try:
+        supplier = supplier_service.get_supplier(db, supplier_id)
+    except HTTPException as exc:
+        if exc.status_code != 404:
+            raise
+        return _supplier_not_found(request)
+    return templates.TemplateResponse(
+        request,
+        "partials/_supplier_form.html",
+        _supplier_form_context(
+            _form_values_from_supplier(supplier), supplier_id=supplier_id
+        ),
+    )
 
-for _path, _title, _icon in PLACEHOLDERS:
-    router.add_api_route(
-        _path,
-        _placeholder_page(_title, _icon),
-        methods=["GET"],
-        response_class=HTMLResponse,
-        include_in_schema=False,
-        name=f"page_{_path.strip('/')}",
+
+@router.post(
+    "/suppliers/{supplier_id}/edit", response_class=HTMLResponse, include_in_schema=False
+)
+def edit_supplier_submit(
+    request: Request,
+    supplier_id: int,
+    form: dict[str, str] = Depends(supplier_form),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    values: dict[str, object] = {key: form[key].strip() for key in form}
+    try:
+        supplier_service.update_supplier(db, supplier_id, SupplierUpdate(**values))
+    except (ValidationError, HTTPException) as exc:
+        return templates.TemplateResponse(
+            request,
+            "partials/_supplier_form.html",
+            _supplier_form_context(
+                values, supplier_id=supplier_id, error=_form_error(exc)
+            ),
+        )
+    return _supplier_table_response(request, db, "Supplier updated.")
+
+
+@router.get(
+    "/suppliers/{supplier_id}/delete", response_class=HTMLResponse, include_in_schema=False
+)
+def delete_supplier_modal(
+    request: Request, supplier_id: int, db: Session = Depends(get_db)
+) -> HTMLResponse:
+    try:
+        supplier = supplier_service.get_supplier(db, supplier_id)
+    except HTTPException as exc:
+        if exc.status_code != 404:
+            raise
+        return _supplier_not_found(request)
+    count = next(
+        (n for item, n in supplier_service.list_suppliers(db) if item.id == supplier_id),
+        0,
+    )
+    return templates.TemplateResponse(
+        request,
+        "partials/_supplier_delete.html",
+        {"supplier": supplier, "supplier_id": supplier_id, "product_count": count, "error": None},
+    )
+
+
+@router.post(
+    "/suppliers/{supplier_id}/delete", response_class=HTMLResponse, include_in_schema=False
+)
+def delete_supplier_submit(
+    request: Request, supplier_id: int, db: Session = Depends(get_db)
+) -> HTMLResponse:
+    try:
+        supplier_service.delete_supplier(db, supplier_id)
+    except HTTPException as exc:
+        if exc.status_code == 404:
+            return _supplier_not_found(request)
+        supplier = supplier_service.get_supplier(db, supplier_id)
+        count = next(
+            (n for item, n in supplier_service.list_suppliers(db) if item.id == supplier_id),
+            0,
+        )
+        return templates.TemplateResponse(
+            request,
+            "partials/_supplier_delete.html",
+            {
+                "supplier": supplier,
+                "supplier_id": supplier_id,
+                "product_count": count,
+                "error": _form_error(exc),
+            },
+        )
+    return _supplier_table_response(request, db, "Supplier deleted.")
+
+
+@router.get("/settings", response_class=HTMLResponse, include_in_schema=False)
+def settings_page(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request, "settings.html", {"page_title": "Settings"}
     )

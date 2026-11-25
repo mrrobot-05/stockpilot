@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="mb-4">
+    <h2 class="h3 mb-1">Settings</h2>
+    <p class="text-body-secondary mb-0">
+      Workspace defaults, shortcuts and application information.
+    </p>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-12 col-xl-6">
+      <div class="card sp-card h-100">
+        <div class="card-header sp-card-header">
+          <h3 class="h6 mb-0">Appearance</h3>
+        </div>
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+            <div>
+              <p class="fw-semibold mb-1">Theme</p>
+              <p class="text-body-secondary small mb-0">
+                Light and dark themes follow Bootstrap's <code>data-bs-theme</code>.
+                Your choice is saved in this browser.
+              </p>
+            </div>
+            <button class="btn btn-outline-secondary" type="button" data-theme-toggle>
+              <i class="bi bi-moon-stars me-1" aria-hidden="true"></i>Toggle theme
+            </button>
+          </div>
+          <p class="small text-body-secondary mb-0 mt-3">
+            <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+            You can also use the theme button in the top bar on every page.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-xl-6">
+      <div class="card sp-card h-100">
+        <div class="card-header sp-card-header">
+          <h3 class="h6 mb-0">Currency</h3>
+        </div>
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="badge text-bg-primary">USD</span>
+            <span class="fw-semibold">US Dollar ($)</span>
+          </div>
+          <p class="text-body-secondary small mb-0">
+            v1 uses USD for all inventory values. Currency selection is planned for a future
+            release; no account settings are stored yet.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-xl-6">
+      <div class="card sp-card h-100">
+        <div class="card-header sp-card-header">
+          <h3 class="h6 mb-0">Application</h3>
+        </div>
+        <dl class="sp-detail-list mb-0">
+          <div><dt>Name</dt><dd>StockPilot</dd></div>
+          <div><dt>Version</dt><dd>v0.1.0</dd></div>
+          <div><dt>Tagline</dt><dd>Inventory, on autopilot.</dd></div>
+          <div>
+            <dt>API docs</dt>
+            <dd><a href="/docs">Open Swagger UI</a></dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+
+    <div class="col-12 col-xl-6">
+      <div class="card sp-card h-100">
+        <div class="card-header sp-card-header">
+          <h3 class="h6 mb-0">Data tools</h3>
+        </div>
+        <div class="card-body">
+          <p class="sp-stat-label text-body-secondary mb-2">Download CSV</p>
+          <div class="d-flex flex-wrap gap-2 mb-4">
+            <a class="btn btn-sm btn-outline-secondary" href="/api/export/products.csv">
+              <i class="bi bi-box-seam me-1" aria-hidden="true"></i>Products
+            </a>
+            <a class="btn btn-sm btn-outline-secondary" href="/api/export/movements.csv">
+              <i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i>Movements
+            </a>
+          </div>
+          <p class="sp-stat-label text-body-secondary mb-2">Demo data</p>
+          <code class="sp-code d-inline-block">.\.venv\Scripts\python -m scripts.seed</code>
+          <p class="text-body-secondary small mt-2 mb-0">
+            Run from the <code>backend/</code> folder after <code>alembic upgrade head</code>.
+            The seed is idempotent and skips when products already exist.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card sp-card">
+        <div class="card-body d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
+          <div>
+            <p class="fw-semibold mb-1">Stock changes</p>
+            <p class="text-body-secondary small mb-0">
+              Product quantities are updated only through the movement ledger — IN, OUT and
+              ADJUST. Editing a product never changes its stock directly.
+            </p>
+          </div>
+          <a class="btn btn-outline-primary" href="/movements">
+            <i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i>Record a movement
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
