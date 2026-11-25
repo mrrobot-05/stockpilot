@@ -68,6 +68,20 @@ Start the server from `backend/` and open http://127.0.0.1:8000/ — it redirect
 remembers your choice in `localStorage`; the export dropdown downloads the same CSV files as
 the API.
 
+Current UI pages:
+
+| Page | Purpose |
+| --- | --- |
+| `/dashboard` | Totals, stock value, chart, attention list, recent movements |
+| `/products` | Search/filter/sort/paginate; modal create, edit and delete |
+| `/movements` | Filtered ledger and the record-movement modal (IN / OUT / ADJUST) |
+| `/categories` | Searchable list with product counts and full CRUD modals |
+| `/suppliers` | Searchable list with product counts and full CRUD modals |
+| `/settings` | Theme control, read-only USD, version, API/CSV links and seed command |
+
+All page routes are excluded from the OpenAPI schema; only `/api` endpoints are documented
+at `/docs`.
+
 A fresh database has an empty-state dashboard. Load demo data with:
 
 ```powershell
@@ -114,6 +128,10 @@ Sort accepts `id`, `sku`, `name`, `quantity`, `sell_price`, `created_at`; prefix
 descending. Duplicate SKUs are rejected with `409` (case-insensitive), as are duplicate
 category and supplier names. Product reads include nested `category` and `supplier` briefs.
 Deleting a category or supplier sets the matching products' references to `null`.
+
+`low_stock` means `0 < quantity <= reorder_level`; `out_of_stock` means `quantity == 0`.
+They are independent filters on `/api/products` and can be combined with `q`, `category_id`
+and `supplier_id`.
 
 ## Stock movements
 
