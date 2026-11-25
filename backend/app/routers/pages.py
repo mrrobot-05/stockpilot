@@ -2,6 +2,7 @@
 
 import json
 import math
+import re
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from functools import partial
@@ -17,7 +18,7 @@ from starlette.templating import Jinja2Templates
 
 from app.db.session import get_db
 from app.models import MovementType, Product
-from app.schemas import ProductCreate, ProductUpdate
+from app.schemas import MovementCreate, ProductCreate, ProductUpdate
 from app.services import categories as category_service
 from app.services import movements as movement_service
 from app.services import products as product_service
@@ -332,6 +333,53 @@ def _movement_table_context(
     }
 
 
+DEFAULT_MOVEMENT_FORM_VALUES: dict[str, object] = {
+    "product_id": None,
+    "movement_type": "IN",
+    "quantity": 1,
+    "note": "",
+    "next": "",
+}
+
+
+def _all_products(db: Session) -> list[Product]:
+    return product_service.list_products(db, sort="name", page_size=1000)[0]
+
+
+def _safe_next(value: str | None) -> str | None:
+    """Only allow post-write redirects back to a local product detail page."""
+    candidate = (value or "").strip()
+    return candidate if re.fullmatch(r"/products/\d+", candidate) else None
+
+
+def _movement_form_context(
+    db: Session, values: dict[str, object], *, error: str | None = None
+) -> dict:
+    return {
+        "values": values,
+        "error": error,
+        "products": _all_products(db),
+        "types": tuple(MovementType),
+    }
+
+
+def movement_form(
+    product_id: str = Form(""),
+    movement_type: str = Form(""),
+    quantity: str = Form(""),
+    note: str = Form(""),
+    next: str = Form(""),
+) -> dict[str, str]:
+    """Collect the record-movement modal fields."""
+    return {
+        "product_id": product_id,
+        "movement_type": movement_type,
+        "quantity": quantity,
+        "note": note,
+        "next": next,
+    }
+
+
 @router.get("/", include_in_schema=False)
 def root() -> RedirectResponse:
     return RedirectResponse(url="/dashboard", status_code=307)
@@ -567,7 +615,7 @@ def movements_page(
         db, product_id=product_filter, movement_type=type_filter, page=page
     )
     context["page_title"] = "Movements"
-    context["products"] = product_service.list_products(db, sort="name", page_size=1000)[0]
+    context["products"] = _all_products(db)
 
     template = (
         "partials/_movement_table.html"
@@ -575,6 +623,82 @@ def movements_page(
         else "movements.html"
     )
     return templates.TemplateResponse(request, template, context)
+
+
+@router.get("/movements/new", response_class=HTMLResponse, include_in_schema=False)
+def new_movement_modal(
+    request: Request,
+    product_id: str | None = None,
+    next: str | None = None,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    values = DEFAULT_MOVEMENT_FORM_VALUES.copy()
+    values["product_id"] = _optional_int(product_id)
+    values["next"] = _safe_next(next) or ""
+    return templates.TemplateResponse(
+        request, "partials/_movement_form.html", _movement_form_context(db, values)
+    )
+
+
+@router.post("/movements", response_class=HTMLResponse, include_in_schema=False)
+def create_movement_submit(
+    request: Request,
+    form: dict[str, str] = Depends(movement_form),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    values: dict[str, object] = {
+        "product_id": _optional_int(form["product_id"]),
+        "movement_type": form["movement_type"].strip().upper(),
+        "quantity": form["quantity"].strip() or "0",
+        "note": form["note"].strip(),
+        "next": _safe_next(form["next"]) or "",
+    }
+    if values["product_id"] is None:
+        return templates.TemplateResponse(
+            request,
+            "partials/_movement_form.html",
+            _movement_form_context(db, values, error="product: Choose a product."),
+        )
+
+    try:
+        payload = MovementCreate(
+            movement_type=str(values["movement_type"]),
+            quantity=str(values["quantity"]),
+            note=str(values["note"]) or None,
+        )
+        movement = movement_service.create_movement(db, int(values["product_id"]), payload)
+    except (ValidationError, HTTPException) as exc:
+        return templates.TemplateResponse(
+            request,
+            "partials/_movement_form.html",
+            _movement_form_context(db, values, error=_form_error(exc)),
+        )
+
+    if values["next"]:
+        return HTMLResponse(content="", headers={"HX-Redirect": str(values["next"])})
+
+    headers = {
+        "HX-Retarget": "#movement-table",
+        "HX-Reswap": "outerHTML",
+        "HX-Trigger": json.dumps(
+            {
+                "closeModal": "",
+                "showToast": {
+                    "message": (
+                        f"{movement.product.name}: "
+                        f"{movement.movement_type.value} movement recorded."
+                    ),
+                    "type": "success",
+                },
+            }
+        ),
+    }
+    return templates.TemplateResponse(
+        request,
+        "partials/_movement_table.html",
+        _movement_table_context(db),
+        headers=headers,
+    )
 
 
 def _placeholder_page(title: str, icon: str) -> Callable[..., HTMLResponse]:

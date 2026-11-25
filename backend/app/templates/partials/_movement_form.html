@@ -1,0 +1,79 @@
+{% set type_help = {
+  'IN': 'Stock received',
+  'OUT': 'Stock issued',
+  'ADJUST': 'New absolute stock level'
+} %}
+<div
+  class="modal fade"
+  id="movementModal"
+  tabindex="-1"
+  aria-labelledby="movementModalTitle"
+  aria-modal="true"
+  role="dialog"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form hx-post="/movements" hx-target="#modal-root" hx-swap="innerHTML">
+        <div class="modal-header">
+          <h2 class="modal-title h5" id="movementModalTitle">Record movement</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          {% if error %}
+            <div class="alert alert-danger" role="alert">
+              <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>{{ error }}
+            </div>
+          {% endif %}
+          <input type="hidden" name="next" value="{{ values.next or '' }}" />
+
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label sp-label" for="movement-form-product">Product *</label>
+              <select class="form-select" id="movement-form-product" name="product_id" required>
+                <option value="" {% if values.product_id is none %}selected{% endif %}>Choose a product…</option>
+                {% for product in products %}
+                  <option value="{{ product.id }}" {% if values.product_id|string == product.id|string %}selected{% endif %}>
+                    {{ product.name }} ({{ product.sku }})
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12 col-sm-6">
+              <label class="form-label sp-label" for="movement-form-type">Type *</label>
+              <select class="form-select" id="movement-form-type" name="movement_type" required>
+                {% for type in types %}
+                  <option value="{{ type.value }}" {% if values.movement_type|string == type.value %}selected{% endif %}>
+                    {{ type.value }} — {{ type_help[type.value] }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12 col-sm-6">
+              <label class="form-label sp-label" for="movement-form-quantity">Quantity *</label>
+              <input class="form-control" type="number" step="1" min="0" required
+                id="movement-form-quantity" name="quantity" value="{{ values.quantity }}" />
+            </div>
+            <div class="col-12">
+              <label class="form-label sp-label" for="movement-form-note">Note</label>
+              <textarea class="form-control" id="movement-form-note" name="note"
+                rows="2" maxlength="500" placeholder="Optional context, e.g. supplier restock">{{ values.note or '' }}</textarea>
+            </div>
+            <div class="col-12">
+              <p class="small text-body-secondary mb-0">
+                <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+                For IN and OUT, quantity is the number of units moved. For ADJUST, it is the
+                new absolute stock level.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check2 me-1" aria-hidden="true"></i>Record movement
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
