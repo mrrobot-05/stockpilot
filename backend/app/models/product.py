@@ -11,6 +11,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.category import Category
+    from app.models.stock_movement import StockMovement
     from app.models.supplier import Supplier
 
 
@@ -45,6 +46,9 @@ class Product(Base):
 
     category: Mapped[Category | None] = relationship(back_populates="products")
     supplier: Mapped[Supplier | None] = relationship(back_populates="products")
+    movements: Mapped[list[StockMovement]] = relationship(
+        back_populates="product", passive_deletes=True
+    )
 
     def __repr__(self) -> str:
         return f"<Product id={self.id} sku={self.sku!r} name={self.name!r}>"

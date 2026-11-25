@@ -3,7 +3,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
-from app.models import Category, Product, Supplier
+from app.models import Category, Product, StockMovement, Supplier
 from app.schemas import ProductCreate, ProductUpdate
 
 SORT_FIELDS = frozenset({"id", "sku", "name", "quantity", "sell_price", "created_at"})
@@ -149,5 +149,20 @@ def update_product(db: Session, product_id: int, payload: ProductUpdate) -> Prod
 
 def delete_product(db: Session, product_id: int) -> None:
     product = get_product(db, product_id)
+    has_history = db.scalar(
+        select(StockMovement.id).where(StockMovement.product_id == product_id)
+    )
+    if has_history is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Product has stock movements and cannot be deleted",
+        )
     db.delete(product)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Product has stock movements and cannot be deleted",
+        )

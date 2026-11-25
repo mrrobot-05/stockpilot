@@ -70,6 +70,9 @@ Interactive API docs: http://127.0.0.1:8000/docs
 - `GET /api/products/{id}`
 - `PATCH /api/products/{id}`
 - `DELETE /api/products/{id}`
+- `POST /api/products/{id}/movements` — record IN / OUT / ADJUST
+- `GET /api/products/{id}/movements` — history for one product
+- `GET /api/movements` — `product_id`, `movement_type`, `page`, `page_size`, `sort`
 - `GET /api/categories` — optional `q`
 - `POST /api/categories`
 - `GET /api/categories/{id}`
@@ -85,3 +88,20 @@ Sort accepts `id`, `sku`, `name`, `quantity`, `sell_price`, `created_at`; prefix
 descending. Duplicate SKUs are rejected with `409` (case-insensitive), as are duplicate
 category and supplier names. Product reads include nested `category` and `supplier` briefs.
 Deleting a category or supplier sets the matching products' references to `null`.
+
+## Stock movements
+
+Stock is changed only through the movement ledger; `PATCH /api/products/{id}` rejects
+`quantity` with `422` ("Use the stock movements API to change quantity"). `ProductCreate.quantity`
+is opening stock and creates no movement row.
+
+- `IN`: `quantity >= 1`, adds to stock.
+- `OUT`: `quantity >= 1`, subtracts from stock; insufficient stock returns `409`.
+- `ADJUST`: `quantity >= 0` is the **new absolute stock level**; `quantity_change` is
+  `new - old` and may be negative.
+
+Each movement records `quantity`, signed `quantity_change`, `stock_after`, and an optional
+`note`, and is applied to the product in the same transaction. Movements are immutable —
+there are no PATCH or DELETE endpoints. Products with movement history cannot be deleted
+(`409`). Movement list sorting accepts `id`, `created_at`, `quantity`, `movement_type`,
+`stock_after`; prefix with `-` for descending (default `-created_at`).

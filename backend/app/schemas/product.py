@@ -90,6 +90,11 @@ class ProductUpdate(_ProductValidators):
     reorder_level: int | None = None
     is_active: bool | None = None
 
+    @field_validator("quantity", mode="before")
+    @classmethod
+    def reject_quantity(cls, value: object) -> object:
+        raise ValueError("Use the stock movements API to change quantity")
+
 
 class ProductRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)

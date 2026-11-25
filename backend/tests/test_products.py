@@ -157,16 +157,26 @@ def test_patch_product(client: TestClient) -> None:
     created = make_product(client, quantity=1)
     response = client.patch(
         f"/api/products/{created['id']}",
-        json={"name": "  New Name  ", "quantity": 42, "is_active": False},
+        json={"name": "  New Name  ", "is_active": False},
     )
 
     assert response.status_code == 200
     body = response.json()
     assert body["name"] == "New Name"
-    assert body["quantity"] == 42
+    assert body["quantity"] == 1
     assert body["is_active"] is False
     assert body["sku"] == "SKU-1"
     assert client.get(f"/api/products/{created['id']}").json()["name"] == "New Name"
+
+
+def test_patch_quantity_rejected(client: TestClient) -> None:
+    created = make_product(client, quantity=3)
+
+    response = client.patch(f"/api/products/{created['id']}", json={"quantity": 5})
+
+    assert response.status_code == 422
+    assert "stock movements" in response.json()["detail"][0]["msg"]
+    assert client.get(f"/api/products/{created['id']}").json()["quantity"] == 3
 
 
 def test_patch_product_not_found(client: TestClient) -> None:

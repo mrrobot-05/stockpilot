@@ -5,7 +5,7 @@ from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import Session
 
 from alembic import command
-from app.models import Category, Product, Supplier
+from app.models import Category, MovementType, Product, StockMovement, Supplier
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 ALEMBIC_INI = BACKEND_DIR / "alembic.ini"
@@ -27,6 +27,7 @@ def test_initial_migration_creates_full_schema(tmp_path: Path) -> None:
             "products",
             "categories",
             "suppliers",
+            "stock_movements",
         }
         assert len(inspector.get_columns("products")) == 13
 
@@ -45,6 +46,31 @@ def test_initial_migration_creates_full_schema(tmp_path: Path) -> None:
         assert foreign_keys["supplier_id"]["referred_table"] == "suppliers"
         assert foreign_keys["supplier_id"]["options"]["ondelete"] == "SET NULL"
 
+        movement_columns = inspector.get_columns("stock_movements")
+        assert [column["name"] for column in movement_columns] == [
+            "id",
+            "product_id",
+            "movement_type",
+            "quantity",
+            "quantity_change",
+            "stock_after",
+            "note",
+            "created_at",
+        ]
+        movement_indexes = {
+            index["name"] for index in inspector.get_indexes("stock_movements")
+        }
+        assert {
+            "ix_stock_movements_product_id",
+            "ix_stock_movements_movement_type",
+            "ix_stock_movements_created_at",
+        } <= movement_indexes
+        movement_fks = inspector.get_foreign_keys("stock_movements")
+        assert len(movement_fks) == 1
+        assert movement_fks[0]["referred_table"] == "products"
+        assert movement_fks[0]["constrained_columns"] == ["product_id"]
+        assert movement_fks[0]["options"]["ondelete"] == "RESTRICT"
+
         with Session(engine) as db:
             category = Category(name="Tools")
             supplier = Supplier(name="Acme")
@@ -62,5 +88,17 @@ def test_initial_migration_creates_full_schema(tmp_path: Path) -> None:
             assert stored is not None
             assert stored.category.name == "Tools"
             assert stored.supplier.name == "Acme"
+
+            movement = StockMovement(
+                product=stored,
+                movement_type=MovementType.IN,
+                quantity=7,
+                quantity_change=7,
+                stock_after=7,
+                note="opening delivery",
+            )
+            db.add(movement)
+            db.commit()
+            assert db.get(StockMovement, movement.id).movement_type == MovementType.IN
     finally:
         engine.dispose()

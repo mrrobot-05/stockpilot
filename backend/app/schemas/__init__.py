@@ -5,6 +5,12 @@ from app.schemas.category import (
     CategoryRead,
     CategoryUpdate,
 )
+from app.schemas.movement import (
+    MovementCreate,
+    MovementPage,
+    MovementRead,
+    ProductBrief,
+)
 from app.schemas.product import (
     ProductBase,
     ProductCreate,
@@ -26,8 +32,12 @@ __all__ = [
     "CategoryCreate",
     "CategoryRead",
     "CategoryUpdate",
+    "MovementCreate",
+    "MovementPage",
+    "MovementRead",
     "ProductBase",
     "ProductCreate",
+    "ProductBrief",
     "ProductPage",
     "ProductRead",
     "ProductUpdate",
