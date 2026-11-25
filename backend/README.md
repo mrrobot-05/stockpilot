@@ -83,6 +83,9 @@ Interactive API docs: http://127.0.0.1:8000/docs
 - `GET /api/suppliers/{id}`
 - `PATCH /api/suppliers/{id}`
 - `DELETE /api/suppliers/{id}`
+- `GET /api/stats` — dashboard totals, counts and the latest 10 movements
+- `GET /api/export/products.csv`
+- `GET /api/export/movements.csv`
 
 Sort accepts `id`, `sku`, `name`, `quantity`, `sell_price`, `created_at`; prefix with `-` for
 descending. Duplicate SKUs are rejected with `409` (case-insensitive), as are duplicate
@@ -105,3 +108,26 @@ Each movement records `quantity`, signed `quantity_change`, `stock_after`, and a
 there are no PATCH or DELETE endpoints. Products with movement history cannot be deleted
 (`409`). Movement list sorting accepts `id`, `created_at`, `quantity`, `movement_type`,
 `stock_after`; prefix with `-` for descending (default `-created_at`).
+
+## Dashboard and data export
+
+`/api/stats` returns product/stock totals, stock cost and retail values, low-stock
+(`0 < quantity <= reorder_level`) and out-of-stock counts, category/supplier counts, and
+the 10 most recent movements with nested product briefs. All figures are plain JSON
+numbers.
+
+The CSV endpoints stream downloadable files (`Content-Disposition: attachment`) with a
+stable header row. Products are ordered by id; movements by `created_at`, `id`.
+
+## Seed data
+
+After `alembic upgrade head`, load demo data from `backend/`:
+
+```powershell
+.\.venv\Scripts\python -m scripts.seed
+```
+
+The seed is idempotent: it prints a skip message and changes nothing when any products
+already exist. It creates three categories, three suppliers, eight products and ten
+movements. Opening stock is set at product creation (`quantity`) and produces no movement
+rows; subsequent sales, a restock and a stocktake correction are recorded in the ledger.

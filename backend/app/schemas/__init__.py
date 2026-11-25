@@ -18,6 +18,7 @@ from app.schemas.product import (
     ProductRead,
     ProductUpdate,
 )
+from app.schemas.stats import StatsRead
 from app.schemas.supplier import (
     SupplierBase,
     SupplierBrief,
@@ -46,4 +47,5 @@ __all__ = [
     "SupplierCreate",
     "SupplierRead",
     "SupplierUpdate",
+    "StatsRead",
 ]

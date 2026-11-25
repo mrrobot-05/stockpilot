@@ -43,7 +43,7 @@ class StockMovement(Base):
     stock_after: Mapped[int] = mapped_column(Integer, nullable=False)
     note: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), nullable=False
+        DateTime, server_default=func.now(), nullable=False, index=True
     )
 
     product: Mapped[Product] = relationship(back_populates="movements")
