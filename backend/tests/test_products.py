@@ -134,6 +134,27 @@ def test_low_stock_filter(client: TestClient) -> None:
     assert [item["sku"] for item in response.json()["items"]] == ["SKU-LOW"]
 
 
+def test_low_stock_filter_excludes_out_of_stock(client: TestClient) -> None:
+    make_product(client, sku="SKU-ZERO", name="Zero", quantity=0, reorder_level=5)
+    make_product(client, sku="SKU-LOW", name="Low", quantity=2, reorder_level=5)
+
+    response = client.get("/api/products", params={"low_stock": "true"})
+
+    assert response.status_code == 200
+    assert [item["sku"] for item in response.json()["items"]] == ["SKU-LOW"]
+
+
+def test_out_of_stock_filter_only_returns_zero_quantity(client: TestClient) -> None:
+    make_product(client, sku="SKU-ZERO", name="Zero", quantity=0, reorder_level=5)
+    make_product(client, sku="SKU-LOW", name="Low", quantity=2, reorder_level=5)
+    make_product(client, sku="SKU-OK", name="Ok", quantity=10, reorder_level=2)
+
+    response = client.get("/api/products", params={"out_of_stock": "true"})
+
+    assert response.status_code == 200
+    assert [item["sku"] for item in response.json()["items"]] == ["SKU-ZERO"]
+
+
 def test_get_product(client: TestClient) -> None:
     created = make_product(client)
     response = client.get(f"/api/products/{created['id']}")

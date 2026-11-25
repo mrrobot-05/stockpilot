@@ -79,6 +79,24 @@ def test_static_assets_are_served(client: TestClient) -> None:
     assert "showToast" in js.text
 
 
+def test_dashboard_attention_merges_low_and_out_of_stock(client: TestClient) -> None:
+    for sku, quantity in (("ATT-LOW", 2), ("ATT-ZERO", 0), ("ATT-OK", 50)):
+        response = client.post(
+            "/api/products",
+            json={"sku": sku, "name": sku, "quantity": quantity, "reorder_level": 5},
+        )
+        assert response.status_code == 201, response.text
+
+    html = client.get("/dashboard").text
+
+    assert "ATT-LOW" in html
+    assert "ATT-ZERO" in html
+    assert "ATT-OK" not in html
+    assert "Low stock" in html
+    assert "Out of stock" in html
+    assert html.index("ATT-ZERO") < html.index("ATT-LOW")  # out of stock sorts first
+
+
 def test_pages_have_no_legacy_branding(client: TestClient) -> None:
     for path in PAGE_PATHS:
         response = client.get(path)

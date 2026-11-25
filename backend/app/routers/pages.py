@@ -572,13 +572,20 @@ def dashboard(request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
     low_stock, _ = product_service.list_products(
         db, low_stock=True, sort="quantity", page_size=5
     )
+    out_of_stock, _ = product_service.list_products(
+        db, out_of_stock=True, sort="quantity", page_size=5
+    )
+    attention = sorted(
+        {product.id: product for product in [*low_stock, *out_of_stock]}.values(),
+        key=lambda product: (product.quantity, product.id),
+    )[:5]
     return templates.TemplateResponse(
         request,
         "dashboard.html",
         {
             "page_title": "Dashboard",
             "stats": stats,
-            "low_stock": low_stock,
+            "attention": attention,
             "in_stock": max(
                 stats.total_products - stats.low_stock_count - stats.out_of_stock_count,
                 0,

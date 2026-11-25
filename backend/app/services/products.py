@@ -63,6 +63,7 @@ def list_products(
     db: Session,
     q: str | None = None,
     low_stock: bool = False,
+    out_of_stock: bool = False,
     sort: str = DEFAULT_SORT,
     page: int = 1,
     page_size: int = DEFAULT_PAGE_SIZE,
@@ -82,7 +83,11 @@ def list_products(
             )
         )
     if low_stock:
-        stmt = stmt.where(Product.quantity <= Product.reorder_level)
+        stmt = stmt.where(
+            Product.quantity > 0, Product.quantity <= Product.reorder_level
+        )
+    if out_of_stock:
+        stmt = stmt.where(Product.quantity == 0)
     if category_id is not None:
         stmt = stmt.where(Product.category_id == category_id)
     if supplier_id is not None:

@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from alembic.config import Config
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import Session
 
 from alembic import command
@@ -31,11 +31,33 @@ def test_initial_migration_creates_full_schema(tmp_path: Path) -> None:
         }
         assert len(inspector.get_columns("products")) == 13
 
-        indexes = {index["name"]: index for index in inspector.get_indexes("products")}
-        assert bool(indexes["ix_products_sku"]["unique"]) is True
-        assert "ix_products_id" not in indexes
-        assert "ix_products_category_id" in indexes
-        assert "ix_products_supplier_id" in indexes
+        # SQLAlchemy skips reflection of SQLite expression indexes, so read sqlite_master.
+        with engine.connect() as connection:
+            def index_sql(table: str) -> dict[str, str]:
+                rows = connection.execute(
+                    text(
+                        "SELECT name, sql FROM sqlite_master "
+                        "WHERE type='index' AND tbl_name=:table"
+                    ),
+                    {"table": table},
+                ).all()
+                return {name: sql or "" for name, sql in rows}
+
+            products_indexes = index_sql("products")
+            assert "ix_products_sku" in products_indexes
+            assert "UNIQUE" in products_indexes["ix_products_sku"].upper()
+            assert "ix_products_id" not in products_indexes
+            assert "ix_products_category_id" in products_indexes
+            assert "ix_products_supplier_id" in products_indexes
+            assert "LOWER(" in products_indexes["uq_products_sku_lower"].upper()
+
+            category_indexes = index_sql("categories")
+            assert "UNIQUE" in category_indexes["ix_categories_name"].upper()
+            assert "LOWER(" in category_indexes["uq_categories_name_lower"].upper()
+
+            supplier_indexes = index_sql("suppliers")
+            assert "UNIQUE" in supplier_indexes["ix_suppliers_name"].upper()
+            assert "LOWER(" in supplier_indexes["uq_suppliers_name_lower"].upper()
 
         foreign_keys = {
             key["constrained_columns"][0]: key

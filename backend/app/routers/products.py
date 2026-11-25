@@ -14,6 +14,7 @@ router = APIRouter(prefix="/api/products", tags=["products"])
 def list_products(
     q: str | None = None,
     low_stock: bool = False,
+    out_of_stock: bool = False,
     sort: str = "id",
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
@@ -26,6 +27,7 @@ def list_products(
         db,
         q=q,
         low_stock=low_stock,
+        out_of_stock=out_of_stock,
         sort=sort,
         page=page,
         page_size=page_size,

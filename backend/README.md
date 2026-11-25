@@ -87,8 +87,8 @@ products already exist.
 ## API
 
 - `GET /api/health`
-- `GET /api/products` — `q`, `low_stock`, `sort`, `page`, `page_size`, `category_id`,
-  `supplier_id`, `is_active`
+- `GET /api/products` — `q`, `low_stock`, `out_of_stock`, `sort`, `page`, `page_size`,
+  `category_id`, `supplier_id`, `is_active`
 - `POST /api/products`
 - `GET /api/products/{id}`
 - `PATCH /api/products/{id}`
@@ -141,6 +141,10 @@ numbers.
 
 The CSV endpoints stream downloadable files (`Content-Disposition: attachment`) with a
 stable header row. Products are ordered by id; movements by `created_at`, `id`.
+
+`low_stock` means `0 < quantity <= reorder_level`; `out_of_stock` means `quantity == 0`.
+Both filters are available on `/api/products`, and the dashboard's "Needs attention" list
+merges the two, sorted by quantity.
 
 ## Seed data
 

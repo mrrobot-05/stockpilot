@@ -150,9 +150,9 @@
             <h2 class="h6 mb-0">Needs attention</h2>
             <a class="btn btn-sm btn-outline-secondary" href="/products">View all</a>
           </div>
-          {% if low_stock %}
+          {% if attention %}
             <div class="list-group list-group-flush">
-              {% for product in low_stock %}
+              {% for product in attention %}
                 <div class="list-group-item sp-attention-item">
                   <div class="min-w-0">
                     <div class="fw-semibold text-truncate">{{ product.name }}</div>
