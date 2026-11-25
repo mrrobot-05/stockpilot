@@ -1,5 +1,6 @@
 import json
 
+import pytest
 from fastapi.testclient import TestClient
 
 
@@ -128,6 +129,27 @@ def test_products_filters(client: TestClient) -> None:
     assert "SKU-A" in bad_sort.text
 
 
+@pytest.mark.parametrize("sort", ["--id", "-"])
+def test_malformed_sort_falls_back_to_id(client: TestClient, sort: str) -> None:
+    setup_products(client)
+
+    response = client.get("/products", params={"sort": sort})
+
+    assert response.status_code == 200
+    for sku in ("SKU-A", "SKU-B", "SKU-C"):
+        assert sku in response.text
+
+
+def test_unknown_is_active_value_shows_all_products(client: TestClient) -> None:
+    setup_products(client)
+
+    response = client.get("/products", params={"is_active": "garbage"})
+
+    assert response.status_code == 200
+    for sku in ("SKU-A", "SKU-B", "SKU-C"):
+        assert sku in response.text
+
+
 def test_products_sorting_and_pagination(client: TestClient) -> None:
     for index in range(5):
         response = client.post(
@@ -193,7 +215,7 @@ def test_product_detail_404(client: TestClient) -> None:
     response = client.get("/products/999999")
 
     assert response.status_code == 404
-    assert "Product not found" in response.text
+    assert '<h2 class="h3 mt-3">Product not found</h2>' in response.text
 
 
 def test_create_product_from_form_updates_table(client: TestClient) -> None:

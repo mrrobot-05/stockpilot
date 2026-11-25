@@ -154,7 +154,7 @@ def test_supplier_modals_404(client: TestClient) -> None:
     for path in ("/suppliers/999/edit", "/suppliers/999/delete"):
         response = client.get(path)
         assert response.status_code == 404
-        assert "Supplier not found" in response.text
+        assert '<h2 class="h3 mt-3">Supplier not found</h2>' in response.text
 
 
 def test_suppliers_ui_has_no_legacy_branding(client: TestClient) -> None:

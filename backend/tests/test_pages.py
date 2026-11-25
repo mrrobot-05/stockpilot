@@ -77,6 +77,8 @@ def test_static_assets_are_served(client: TestClient) -> None:
     assert "--sp-" in css.text
     assert js.status_code == 200
     assert "showToast" in js.text
+    assert "htmx:beforeRequest" in js.text
+    assert "hidden.bs.modal" in js.text
 
 
 def test_dashboard_attention_merges_low_and_out_of_stock(client: TestClient) -> None:

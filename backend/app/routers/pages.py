@@ -77,7 +77,21 @@ def _optional_int(value: str | None) -> int | None:
 def _optional_bool(value: str | None) -> bool | None:
     if value is None or not value.strip():
         return None
-    return value.strip().lower() in {"1", "true", "yes", "on"}
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    return None  # unrecognised values mean "no filter" in the UI
+
+
+def _page_sort(sort: str) -> str:
+    """Accept only a known key, optionally with one leading '-'."""
+    descending = sort.startswith("-")
+    field = sort[1:] if descending else sort
+    if descending and field.startswith("-"):
+        return "id"
+    return sort if field in product_service.SORT_FIELDS else "id"
 
 
 def _products_url(
@@ -610,7 +624,7 @@ def products_page(
     category_filter = _optional_int(category_id)
     supplier_filter = _optional_int(supplier_id)
     active_filter = _optional_bool(is_active)
-    sort_key = sort if sort.lstrip("-") in product_service.SORT_FIELDS else "id"
+    sort_key = _page_sort(sort)
 
     context = _table_context(
         db,

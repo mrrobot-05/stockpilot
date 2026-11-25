@@ -145,7 +145,7 @@ def test_category_modals_404(client: TestClient) -> None:
     for path in ("/categories/999/edit", "/categories/999/delete"):
         response = client.get(path)
         assert response.status_code == 404
-        assert "Category not found" in response.text
+        assert '<h2 class="h3 mt-3">Category not found</h2>' in response.text
 
 
 def test_categories_ui_has_no_legacy_branding(client: TestClient) -> None:

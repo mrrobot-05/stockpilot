@@ -35,6 +35,25 @@
     updateToggleButton();
   }
 
+  var modalTrigger = null;
+
+  function rememberModalTrigger(event) {
+    var detail = event.detail || {};
+    modalTrigger = detail.elt || null;
+  }
+
+  function restoreFocusOnHide(modal, trigger) {
+    if (!trigger || typeof trigger.focus !== "function") return;
+    modal.addEventListener(
+      "hidden.bs.modal",
+      function restoreFocus() {
+        trigger.focus();
+        modal.removeEventListener("hidden.bs.modal", restoreFocus);
+      },
+      { once: true }
+    );
+  }
+
   function showSwappedModals() {
     var root = document.getElementById("modal-root");
     if (!root) return;
@@ -52,14 +71,17 @@
     document.body.classList.remove("modal-open");
 
     pending.forEach(function (modal) {
+      var trigger = modalTrigger;
+      restoreFocusOnHide(modal, trigger);
       if (window.bootstrap && window.bootstrap.Modal) {
-        window.bootstrap.Modal.getOrCreateInstance(modal).show();
+        window.bootstrap.Modal.getOrCreateInstance(modal).show(trigger || undefined);
       } else {
         modal.classList.add("show");
         modal.style.display = "block";
         document.body.classList.add("modal-open");
       }
     });
+    modalTrigger = null;
   }
 
   function closeModals() {
@@ -93,6 +115,7 @@
         setTheme(currentTheme() === "dark" ? "light" : "dark");
       });
     });
+    document.body.addEventListener("htmx:beforeRequest", rememberModalTrigger);
     document.body.addEventListener("htmx:afterSwap", showSwappedModals);
     document.body.addEventListener("closeModal", closeModals);
     document.body.addEventListener("showToast", onShowToast);
