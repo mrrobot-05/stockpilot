@@ -54,6 +54,23 @@ To create a new migration after changing a model:
 
 Interactive API docs: http://127.0.0.1:8000/docs
 
+## UI
+
+The server-rendered UI (Jinja2 + Bootstrap 5.3 + HTMX + Chart.js via CDN) runs on the same app.
+Start the server from `backend/` and open http://127.0.0.1:8000/ — it redirects to
+`/dashboard`. The theme toggle in the top bar switches between light and dark mode and
+remembers your choice in `localStorage`; the export dropdown downloads the same CSV files as
+the API.
+
+A fresh database has an empty-state dashboard. Load demo data with:
+
+```powershell
+.\.venv\Scripts\python -m scripts.seed
+```
+
+Run that from `backend/` after `alembic upgrade head`. The seed is idempotent and skips when
+products already exist.
+
 ## Test and lint
 
 ```powershell

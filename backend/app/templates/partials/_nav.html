@@ -1,0 +1,24 @@
+{% set nav_items = [
+  ("/dashboard", "Dashboard", "bi-grid-1x2"),
+  ("/products", "Products", "bi-box-seam"),
+  ("/movements", "Movements", "bi-arrow-left-right"),
+  ("/categories", "Categories", "bi-tags"),
+  ("/suppliers", "Suppliers", "bi-truck"),
+  ("/settings", "Settings", "bi-gear")
+] %}
+<nav aria-label="Sections">
+  <ul class="nav app-nav flex-column">
+    {% for path, label, icon in nav_items %}
+      <li class="nav-item">
+        <a
+          class="nav-link {% if request.url.path == path %}active{% endif %}"
+          href="{{ path }}"
+          {% if request.url.path == path %}aria-current="page"{% endif %}
+        >
+          <i class="bi {{ icon }} nav-icon" aria-hidden="true"></i>
+          <span>{{ label }}</span>
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+</nav>
