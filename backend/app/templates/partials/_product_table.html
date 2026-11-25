@@ -1,0 +1,133 @@
+{% macro sort_link(label, field) %}
+  {% set is_sorted = sort == field or sort == '-' ~ field %}
+  {% set next_sort = ('-' ~ field) if sort == field else field %}
+  {% set icon = 'bi-arrow-up-short' if sort == field else ('bi-arrow-down-short' if sort == '-' ~ field else 'bi-arrow-down-up') %}
+  <a
+    class="sp-sort-link {% if is_sorted %}active{% endif %}"
+    href="{{ url(sort=next_sort, page=1) }}"
+    hx-get="{{ url(sort=next_sort, page=1) }}"
+    hx-target="#product-table"
+    hx-swap="outerHTML"
+    hx-push-url="true"
+    aria-label="Sort by {{ label }}"
+  >{{ label }} <i class="bi {{ icon }}" aria-hidden="true"></i></a>
+{% endmacro %}
+
+{% macro page_link(target, label) %}
+  <a
+    class="page-link"
+    href="{{ url(page=target) }}"
+    hx-get="{{ url(page=target) }}"
+    hx-target="#product-table"
+    hx-swap="outerHTML"
+    hx-push-url="true"
+  >{{ label }}</a>
+{% endmacro %}
+
+<div id="product-table" class="card sp-card">
+  <div class="card-header sp-card-header d-flex justify-content-between align-items-center gap-2">
+    <h2 class="h6 mb-0">Product list</h2>
+    <span class="text-body-secondary small">{{ total }} found</span>
+  </div>
+
+  {% if products %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle sp-table mb-0">
+        <caption class="visually-hidden">Products matching the current filters</caption>
+        <thead>
+          <tr>
+            <th scope="col">{{ sort_link('SKU', 'sku') }}</th>
+            <th scope="col">{{ sort_link('Name', 'name') }}</th>
+            <th scope="col">Category</th>
+            <th scope="col">Supplier</th>
+            <th scope="col" class="text-end">{{ sort_link('Stock', 'quantity') }}</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="text-end">Cost</th>
+            <th scope="col" class="text-end">{{ sort_link('Price', 'sell_price') }}</th>
+            <th scope="col" class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for product in products %}
+            <tr>
+              <td class="text-nowrap">
+                <a href="/products/{{ product.id }}">{{ product.sku }}</a>
+              </td>
+              <td>
+                <div class="fw-semibold">{{ product.name }}</div>
+                {% if product.description %}
+                  <div class="small text-body-secondary text-truncate sp-description">
+                    {{ product.description }}
+                  </div>
+                {% endif %}
+              </td>
+              <td>{{ product.category.name if product.category else '—' }}</td>
+              <td>{{ product.supplier.name if product.supplier else '—' }}</td>
+              <td class="text-end oc-num text-nowrap">
+                {{ product.quantity }}
+                <span class="text-body-secondary small">/ {{ product.reorder_level }}</span>
+              </td>
+              <td class="text-nowrap">
+                {% if product.quantity == 0 %}
+                  <span class="badge text-bg-danger">Out of stock</span>
+                {% elif product.quantity <= product.reorder_level %}
+                  <span class="badge text-bg-warning text-dark">Low stock</span>
+                {% else %}
+                  <span class="badge text-bg-success">In stock</span>
+                {% endif %}
+                {% if not product.is_active %}
+                  <span class="badge text-bg-secondary">Inactive</span>
+                {% endif %}
+              </td>
+              <td class="text-end oc-num">{{ product.cost_price|money }}</td>
+              <td class="text-end oc-num">{{ product.sell_price|money }}</td>
+              <td class="text-end">
+                <a class="btn btn-sm btn-outline-primary" href="/products/{{ product.id }}">
+                  View
+                </a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="sp-mini-empty text-center text-body-secondary">
+      <i class="bi bi-box-seam d-block fs-3 mb-2" aria-hidden="true"></i>
+      No products match your filters.
+    </div>
+  {% endif %}
+
+  {% if total %}
+    <div class="card-footer sp-card-footer d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
+      <span class="text-body-secondary small">
+        Page {{ page }} of {{ pages }} · {{ total }} products
+      </span>
+      <nav aria-label="Product pages">
+        <ul class="pagination pagination-sm mb-0">
+          {% if page > 1 %}
+            <li class="page-item">{{ page_link(page - 1, 'Previous') }}</li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">Previous</span></li>
+          {% endif %}
+
+          {% for page_number in range(1, pages + 1) %}
+            <li class="page-item {% if page_number == page %}active{% endif %}">
+              {% if page_number == page %}
+                <span class="page-link" aria-current="page">{{ page_number }}</span>
+              {% else %}
+                {{ page_link(page_number, page_number) }}
+              {% endif %}
+            </li>
+          {% endfor %}
+
+          {% if page < pages %}
+            <li class="page-item">{{ page_link(page + 1, 'Next') }}</li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">Next</span></li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+  {% endif %}
+</div>

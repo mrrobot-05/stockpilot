@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="card sp-card sp-placeholder mx-auto">
+    <div class="card-body text-center py-5">
+      <span class="sp-empty-icon" aria-hidden="true"><i class="bi bi-question-circle"></i></span>
+      <h2 class="h3 mt-3">Product not found</h2>
+      <p class="text-body-secondary mx-auto sp-empty-copy">
+        {{ message }}
+      </p>
+      <div class="d-flex flex-wrap justify-content-center gap-2 mt-3">
+        <a class="btn btn-primary" href="/products">
+          <i class="bi bi-box-seam me-1" aria-hidden="true"></i>Back to products
+        </a>
+        <a class="btn btn-outline-secondary" href="/dashboard">
+          <i class="bi bi-grid-1x2 me-1" aria-hidden="true"></i>Dashboard
+        </a>
+      </div>
+    </div>
+  </div>
+{% endblock %}
