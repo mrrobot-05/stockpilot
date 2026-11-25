@@ -26,8 +26,11 @@ reproducible environment, install the pinned lock file instead (after creating t
 ```
 
 `requirements.lock` pins the runtime and dev dependencies that were tested together.
-Regenerate it from an updated environment with
-`pip freeze --exclude-editable > requirements.lock`.
+Regenerate it from an updated environment as plain UTF-8 (PowerShell's `>` writes UTF-16):
+
+```powershell
+.\.venv\Scripts\python -m pip freeze --exclude-editable | .\.venv\Scripts\python -c "import sys; open('requirements.lock','w',encoding='utf-8',newline='\n').write(sys.stdin.read())"
+```
 
 ## Database
 
@@ -58,14 +61,27 @@ Interactive API docs: http://127.0.0.1:8000/docs
 .\.venv\Scripts\python -m ruff check .
 ```
 
-## API (Phase 1)
+## API
 
 - `GET /api/health`
-- `GET /api/products` — `q`, `low_stock`, `sort`, `page`, `page_size`
+- `GET /api/products` — `q`, `low_stock`, `sort`, `page`, `page_size`, `category_id`,
+  `supplier_id`, `is_active`
 - `POST /api/products`
 - `GET /api/products/{id}`
 - `PATCH /api/products/{id}`
 - `DELETE /api/products/{id}`
+- `GET /api/categories` — optional `q`
+- `POST /api/categories`
+- `GET /api/categories/{id}`
+- `PATCH /api/categories/{id}`
+- `DELETE /api/categories/{id}`
+- `GET /api/suppliers` — optional `q`
+- `POST /api/suppliers`
+- `GET /api/suppliers/{id}`
+- `PATCH /api/suppliers/{id}`
+- `DELETE /api/suppliers/{id}`
 
 Sort accepts `id`, `sku`, `name`, `quantity`, `sell_price`, `created_at`; prefix with `-` for
-descending. Duplicate SKUs are rejected with `409` (case-insensitive).
+descending. Duplicate SKUs are rejected with `409` (case-insensitive), as are duplicate
+category and supplier names. Product reads include nested `category` and `supplier` briefs.
+Deleting a category or supplier sets the matching products' references to `null`.

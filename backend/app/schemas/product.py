@@ -3,6 +3,9 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
+from app.schemas.category import CategoryBrief
+from app.schemas.supplier import SupplierBrief
+
 
 class _ProductValidators(BaseModel):
     """Shared normalization and validation rules for product input schemas."""
@@ -60,6 +63,8 @@ class ProductBase(_ProductValidators):
     sku: str = Field(max_length=64)
     name: str = Field(max_length=200)
     description: str | None = Field(default=None, max_length=2000)
+    category_id: int | None = None
+    supplier_id: int | None = None
     cost_price: Decimal = Decimal("0")
     sell_price: Decimal = Decimal("0")
     quantity: int = 0
@@ -77,6 +82,8 @@ class ProductUpdate(_ProductValidators):
     sku: str | None = Field(default=None, max_length=64)
     name: str | None = Field(default=None, max_length=200)
     description: str | None = Field(default=None, max_length=2000)
+    category_id: int | None = None
+    supplier_id: int | None = None
     cost_price: Decimal | None = None
     sell_price: Decimal | None = None
     quantity: int | None = None
@@ -91,6 +98,10 @@ class ProductRead(BaseModel):
     sku: str
     name: str
     description: str | None
+    category_id: int | None
+    supplier_id: int | None
+    category: CategoryBrief | None = None
+    supplier: SupplierBrief | None = None
     cost_price: Decimal
     sell_price: Decimal
     quantity: int

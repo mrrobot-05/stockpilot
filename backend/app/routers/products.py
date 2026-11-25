@@ -17,10 +17,21 @@ def list_products(
     sort: str = "id",
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
+    category_id: int | None = None,
+    supplier_id: int | None = None,
+    is_active: bool | None = None,
     db: Session = Depends(get_db),
 ) -> ProductPage:
     items, total = product_service.list_products(
-        db, q=q, low_stock=low_stock, sort=sort, page=page, page_size=page_size
+        db,
+        q=q,
+        low_stock=low_stock,
+        sort=sort,
+        page=page,
+        page_size=page_size,
+        category_id=category_id,
+        supplier_id=supplier_id,
+        is_active=is_active,
     )
     return ProductPage(
         items=[ProductRead.model_validate(item) for item in items],
