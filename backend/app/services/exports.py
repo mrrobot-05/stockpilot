@@ -32,6 +32,15 @@ MOVEMENT_HEADER = [
     "note",
 ]
 
+_FORMULA_PREFIXES = ("=", "+", "-", "@")
+
+
+def _safe_cell(value: object) -> object:
+    """Neutralise spreadsheet formulas without changing numeric columns."""
+    if isinstance(value, str) and value.startswith(_FORMULA_PREFIXES):
+        return "'" + value
+    return value
+
 
 def products_csv(db: Session) -> str:
     """Return all products as a deterministic CSV document."""
@@ -46,18 +55,21 @@ def products_csv(db: Session) -> str:
     for product in products:
         writer.writerow(
             [
-                product.sku,
-                product.name,
-                product.description or "",
-                product.category.name if product.category else "",
-                product.supplier.name if product.supplier else "",
-                f"{product.cost_price:.2f}",
-                f"{product.sell_price:.2f}",
-                product.quantity,
-                product.reorder_level,
-                "true" if product.is_active else "false",
-                product.created_at.isoformat(),
-                product.updated_at.isoformat(),
+                _safe_cell(value)
+                for value in [
+                    product.sku,
+                    product.name,
+                    product.description or "",
+                    product.category.name if product.category else "",
+                    product.supplier.name if product.supplier else "",
+                    f"{product.cost_price:.2f}",
+                    f"{product.sell_price:.2f}",
+                    product.quantity,
+                    product.reorder_level,
+                    "true" if product.is_active else "false",
+                    product.created_at.isoformat(),
+                    product.updated_at.isoformat(),
+                ]
             ]
         )
     return output.getvalue()
@@ -76,15 +88,18 @@ def movements_csv(db: Session) -> str:
     for movement in movements:
         writer.writerow(
             [
-                movement.id,
-                movement.created_at.isoformat(),
-                movement.product.sku,
-                movement.product.name,
-                movement.movement_type.value,
-                movement.quantity,
-                movement.quantity_change,
-                movement.stock_after,
-                movement.note or "",
+                _safe_cell(value)
+                for value in [
+                    movement.id,
+                    movement.created_at.isoformat(),
+                    movement.product.sku,
+                    movement.product.name,
+                    movement.movement_type.value,
+                    movement.quantity,
+                    movement.quantity_change,
+                    movement.stock_after,
+                    movement.note or "",
+                ]
             ]
         )
     return output.getvalue()

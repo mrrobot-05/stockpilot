@@ -63,6 +63,30 @@ def test_out_movement_subtracts_stock(client: TestClient) -> None:
     assert client.get(f"/api/products/{product['id']}").json()["quantity"] == 6
 
 
+def test_sequential_movements_keep_stock_and_ledger_consistent(client: TestClient) -> None:
+    product = make_product(client, sku="SEQ-1", quantity=10)
+    expected = 10
+    for movement_type, quantity in (("IN", 3), ("OUT", 5), ("ADJUST", 6), ("OUT", 2)):
+        response = move(client, product["id"], movement_type, quantity)
+        assert response.status_code == 201, response.text
+        body = response.json()
+        if movement_type == "IN":
+            expected += quantity
+        elif movement_type == "OUT":
+            expected -= quantity
+        else:
+            expected = quantity
+        assert body["stock_after"] == expected
+        assert client.get(f"/api/products/{product['id']}").json()["quantity"] == expected
+
+    ledger = sorted(history(client, product["id"])["items"], key=lambda item: item["id"])
+    assert [item["stock_after"] for item in ledger] == [13, 8, 6, 4]
+    assert [item["quantity_change"] for item in ledger] == [3, -5, -2, -2]
+    assert ledger[-1]["stock_after"] == client.get(
+        f"/api/products/{product['id']}"
+    ).json()["quantity"]
+
+
 def test_insufficient_out_conflict_leaves_no_trace(client: TestClient) -> None:
     product = make_product(client, quantity=3)
 

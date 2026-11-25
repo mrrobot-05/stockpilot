@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func, select, update
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session, selectinload
 
 from app.models import MovementType, Product, StockMovement
@@ -26,7 +26,7 @@ def _sort_column(sort: str):
 def create_movement(
     db: Session, product_id: int, payload: MovementCreate
 ) -> StockMovement:
-    """Record a movement and apply its delta to stock in one transaction."""
+    """Apply stock atomically in the database, then ledger the resulting level."""
     product = db.get(Product, product_id)
     if product is None:
         raise HTTPException(
@@ -34,33 +34,53 @@ def create_movement(
         )
 
     old_stock = product.quantity
+    quantity = payload.quantity
     if payload.movement_type == MovementType.IN:
-        new_stock = old_stock + payload.quantity
-        delta = payload.quantity
+        stmt = (
+            update(Product)
+            .where(Product.id == product_id)
+            .values(quantity=Product.quantity + quantity)
+        )
+        delta: int | None = quantity
     elif payload.movement_type == MovementType.OUT:
-        new_stock = old_stock - payload.quantity
-        if new_stock < 0:
+        # The guard lives in the UPDATE so two concurrent issues cannot oversell.
+        stmt = (
+            update(Product)
+            .where(Product.id == product_id, Product.quantity >= quantity)
+            .values(quantity=Product.quantity - quantity)
+        )
+        delta = -quantity
+    else:  # ADJUST: quantity is the new absolute stock level
+        stmt = (
+            update(Product)
+            .where(Product.id == product_id)
+            .values(quantity=quantity)
+        )
+        delta = None
+
+    try:
+        result = db.execute(stmt.execution_options(synchronize_session=False))
+        if payload.movement_type == MovementType.OUT and result.rowcount == 0:
+            db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT, detail="Insufficient stock"
             )
-        delta = -payload.quantity
-    else:  # ADJUST: quantity is the new absolute stock level
-        new_stock = payload.quantity
-        delta = new_stock - old_stock
-
-    movement = StockMovement(
-        product_id=product_id,
-        movement_type=payload.movement_type,
-        quantity=payload.quantity,
-        quantity_change=delta,
-        stock_after=new_stock,
-        note=payload.note,
-    )
-    db.add(movement)
-    product.quantity = new_stock
-    try:
+        db.refresh(product)  # stock_after comes from the database, not a stale object
+        if delta is None:
+            delta = product.quantity - old_stock
+        movement = StockMovement(
+            product_id=product_id,
+            movement_type=payload.movement_type,
+            quantity=quantity,
+            quantity_change=delta,
+            stock_after=product.quantity,
+            note=payload.note,
+        )
+        db.add(movement)
         db.commit()
-    except IntegrityError:
+    except HTTPException:
+        raise
+    except (IntegrityError, OperationalError):
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

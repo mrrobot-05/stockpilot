@@ -90,6 +90,31 @@ def test_products_csv_contents(client: TestClient) -> None:
     assert parsed[2][9] == "false"
 
 
+def test_csv_formula_cells_are_sanitized(client: TestClient) -> None:
+    payload = '=HYPERLINK("http://evil.example","click")'
+    client.post(
+        "/api/products",
+        json={"sku": "CSV-X", "name": payload, "description": "+SUM(1,2)"},
+    )
+    product = client.get("/api/products", params={"q": "CSV-X"}).json()["items"][0]
+    client.post(
+        f"/api/products/{product['id']}/movements",
+        json={"movement_type": "IN", "quantity": 1, "note": "@SUM(1+1)"},
+    )
+
+    products = rows(client.get("/api/export/products.csv"))
+    movements = rows(client.get("/api/export/movements.csv"))
+
+    assert products[1][1] == "'" + payload
+    assert products[1][2] == "'+SUM(1,2)"
+    assert movements[1][8] == "'@SUM(1+1)"
+
+    # Numeric columns stay numeric and usable in spreadsheets.
+    assert products[1][7] == "1"  # quantity after the IN movement
+    assert movements[1][5] == "1"
+    assert movements[1][7] == "1"
+
+
 def test_movements_csv_empty(client: TestClient) -> None:
     response = client.get("/api/export/movements.csv")
 
