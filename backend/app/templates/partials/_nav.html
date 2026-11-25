@@ -9,11 +9,12 @@
 <nav aria-label="Sections">
   <ul class="nav app-nav flex-column">
     {% for path, label, icon in nav_items %}
+      {% set is_active = request.url.path == path or request.url.path.startswith(path ~ '/') %}
       <li class="nav-item">
         <a
-          class="nav-link {% if request.url.path == path %}active{% endif %}"
+          class="nav-link {% if is_active %}active{% endif %}"
           href="{{ path }}"
-          {% if request.url.path == path %}aria-current="page"{% endif %}
+          {% if is_active %}aria-current="page"{% endif %}
         >
           <i class="bi {{ icon }} nav-icon" aria-hidden="true"></i>
           <span>{{ label }}</span>

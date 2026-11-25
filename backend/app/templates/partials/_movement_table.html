@@ -1,0 +1,100 @@
+{% macro page_link(target, label) %}
+  <a
+    class="page-link"
+    href="{{ url(page=target) }}"
+    hx-get="{{ url(page=target) }}"
+    hx-target="#movement-table"
+    hx-swap="outerHTML"
+    hx-push-url="true"
+  >{{ label }}</a>
+{% endmacro %}
+
+<div id="movement-table" class="card sp-card">
+  <div class="card-header sp-card-header d-flex justify-content-between align-items-center gap-2">
+    <h2 class="h6 mb-0">Movement history</h2>
+    <span class="text-body-secondary small">{{ total }} recorded</span>
+  </div>
+
+  {% if movements %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle sp-table mb-0">
+        <caption class="visually-hidden">Stock movements matching the current filters</caption>
+        <thead>
+          <tr>
+            <th scope="col">Date</th>
+            <th scope="col">Product</th>
+            <th scope="col">Type</th>
+            <th scope="col" class="text-end">Change</th>
+            <th scope="col" class="text-end">Stock after</th>
+            <th scope="col">Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for movement in movements %}
+            <tr>
+              <td class="text-nowrap small text-body-secondary">{{ movement.created_at|dt }}</td>
+              <td>
+                <div class="fw-semibold">
+                  <a href="/products/{{ movement.product_id }}">{{ movement.product.name }}</a>
+                </div>
+                <div class="small text-body-secondary sp-sku">{{ movement.product.sku }}</div>
+              </td>
+              <td>
+                {% if movement.movement_type.value == 'IN' %}
+                  <span class="badge text-bg-success">IN</span>
+                {% elif movement.movement_type.value == 'OUT' %}
+                  <span class="badge text-bg-danger">OUT</span>
+                {% else %}
+                  <span class="badge text-bg-info text-dark">ADJUST</span>
+                {% endif %}
+              </td>
+              <td class="text-end oc-num {{ 'text-success' if movement.quantity_change > 0 else ('text-danger' if movement.quantity_change < 0 else 'text-body-secondary') }}">
+                {{ '%+d'|format(movement.quantity_change) }}
+              </td>
+              <td class="text-end oc-num">{{ movement.stock_after }}</td>
+              <td class="small text-body-secondary">{{ movement.note or '—' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="sp-mini-empty text-center text-body-secondary">
+      <i class="bi bi-arrow-left-right d-block fs-3 mb-2" aria-hidden="true"></i>
+      No stock movements match your filters.
+    </div>
+  {% endif %}
+
+  {% if total %}
+    <div class="card-footer sp-card-footer d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
+      <span class="text-body-secondary small">
+        Page {{ page }} of {{ pages }} · {{ total }} movements
+      </span>
+      <nav aria-label="Movement pages">
+        <ul class="pagination pagination-sm mb-0">
+          {% if page > 1 %}
+            <li class="page-item">{{ page_link(page - 1, 'Previous') }}</li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">Previous</span></li>
+          {% endif %}
+
+          {% for page_number in range(1, pages + 1) %}
+            <li class="page-item {% if page_number == page %}active{% endif %}">
+              {% if page_number == page %}
+                <span class="page-link" aria-current="page">{{ page_number }}</span>
+              {% else %}
+                {{ page_link(page_number, page_number) }}
+              {% endif %}
+            </li>
+          {% endfor %}
+
+          {% if page < pages %}
+            <li class="page-item">{{ page_link(page + 1, 'Next') }}</li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">Next</span></li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+  {% endif %}
+</div>

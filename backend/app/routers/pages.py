@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from starlette.templating import Jinja2Templates
 
 from app.db.session import get_db
-from app.models import Product
+from app.models import MovementType, Product
 from app.schemas import ProductCreate, ProductUpdate
 from app.services import categories as category_service
 from app.services import movements as movement_service
@@ -277,6 +277,61 @@ def _table_response(request: Request, db: Session, message: str) -> HTMLResponse
     )
 
 
+def _optional_movement_type(value: str | None) -> MovementType | None:
+    """Accept an empty select value or a case-insensitive movement type."""
+    if value is None or not value.strip():
+        return None
+    try:
+        return MovementType(value.strip().upper())
+    except ValueError:
+        return None
+
+
+def _movements_url(
+    product_id: int | None = None,
+    movement_type: MovementType | None = None,
+    page: int = 1,
+) -> str:
+    """Build a /movements URL that preserves the active filters."""
+    params: list[tuple[str, str]] = []
+    if product_id is not None:
+        params.append(("product_id", str(product_id)))
+    if movement_type is not None:
+        params.append(("movement_type", movement_type.value))
+    if page != 1:
+        params.append(("page", str(page)))
+    return "/movements?" + urlencode(params) if params else "/movements"
+
+
+def _movement_table_context(
+    db: Session,
+    *,
+    product_id: int | None = None,
+    movement_type: MovementType | None = None,
+    page: int = 1,
+) -> dict:
+    page_size = movement_service.DEFAULT_PAGE_SIZE
+    items, total = movement_service.list_movements(
+        db,
+        product_id=product_id,
+        movement_type=movement_type,
+        page=page,
+        page_size=page_size,
+    )
+    return {
+        "movements": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "pages": math.ceil(total / page_size) if total else 0,
+        "product_id": product_id,
+        "movement_type": movement_type,
+        "url": partial(
+            _movements_url, product_id=product_id, movement_type=movement_type
+        ),
+    }
+
+
 @router.get("/", include_in_schema=False)
 def root() -> RedirectResponse:
     return RedirectResponse(url="/dashboard", status_code=307)
@@ -498,6 +553,30 @@ def product_detail_page(
     )
 
 
+@router.get("/movements", response_class=HTMLResponse, include_in_schema=False)
+def movements_page(
+    request: Request,
+    product_id: str | None = None,
+    movement_type: str | None = None,
+    page: int = Query(default=1, ge=1),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    product_filter = _optional_int(product_id)
+    type_filter = _optional_movement_type(movement_type)
+    context = _movement_table_context(
+        db, product_id=product_filter, movement_type=type_filter, page=page
+    )
+    context["page_title"] = "Movements"
+    context["products"] = product_service.list_products(db, sort="name", page_size=1000)[0]
+
+    template = (
+        "partials/_movement_table.html"
+        if request.headers.get("hx-request", "").lower() == "true"
+        else "movements.html"
+    )
+    return templates.TemplateResponse(request, template, context)
+
+
 def _placeholder_page(title: str, icon: str) -> Callable[..., HTMLResponse]:
     def page(request: Request) -> HTMLResponse:
         return templates.TemplateResponse(
@@ -510,7 +589,6 @@ def _placeholder_page(title: str, icon: str) -> Callable[..., HTMLResponse]:
 
 
 PLACEHOLDERS: tuple[tuple[str, str, str], ...] = (
-    ("/movements", "Movements", "bi-arrow-left-right"),
     ("/categories", "Categories", "bi-tags"),
     ("/suppliers", "Suppliers", "bi-truck"),
     ("/settings", "Settings", "bi-gear"),

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4">
+    <div>
+      <h2 class="h3 mb-1">Movements</h2>
+      <p class="text-body-secondary mb-0">
+        A complete ledger of stock received, issued and corrected.
+      </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-outline-secondary" href="/api/export/movements.csv">
+        <i class="bi bi-download me-1" aria-hidden="true"></i>Export CSV
+      </a>
+      <a class="btn btn-outline-secondary" href="/dashboard">
+        <i class="bi bi-grid-1x2 me-1" aria-hidden="true"></i>Dashboard
+      </a>
+    </div>
+  </div>
+
+  <form
+    class="card sp-card sp-filter mb-4"
+    role="search"
+    hx-get="/movements"
+    hx-target="#movement-table"
+    hx-swap="outerHTML"
+    hx-push-url="true"
+  >
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        <div class="col-12 col-md-6">
+          <label class="form-label sp-label" for="movement-product">Product</label>
+          <select class="form-select" id="movement-product" name="product_id">
+            <option value="" {% if product_id is none %}selected{% endif %}>All products</option>
+            {% for product in products %}
+              <option value="{{ product.id }}" {% if product_id == product.id %}selected{% endif %}>
+                {{ product.name }} ({{ product.sku }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="form-label sp-label" for="movement-type">Movement type</label>
+          <select class="form-select" id="movement-type" name="movement_type">
+            <option value="" {% if movement_type is none %}selected{% endif %}>Any type</option>
+            <option value="IN" {% if movement_type and movement_type.value == 'IN' %}selected{% endif %}>IN — stock received</option>
+            <option value="OUT" {% if movement_type and movement_type.value == 'OUT' %}selected{% endif %}>OUT — stock issued</option>
+            <option value="ADJUST" {% if movement_type and movement_type.value == 'ADJUST' %}selected{% endif %}>ADJUST — correction</option>
+          </select>
+        </div>
+        <div class="col-12 d-flex flex-wrap gap-2 align-items-end justify-content-md-end">
+          <input type="hidden" name="page" value="1" />
+          <button class="btn btn-primary" type="submit">
+            <i class="bi bi-funnel me-1" aria-hidden="true"></i>Apply filters
+          </button>
+          <a class="btn btn-outline-secondary" href="/movements">Clear</a>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  {% include "partials/_movement_table.html" %}
+{% endblock %}
