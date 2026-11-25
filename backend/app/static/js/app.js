@@ -32,12 +32,74 @@
     updateToggleButton();
   }
 
+  function showSwappedModals() {
+    var root = document.getElementById("modal-root");
+    if (!root) return;
+
+    var pending = [];
+    root.querySelectorAll(".modal").forEach(function (modal) {
+      if (!modal.classList.contains("show")) pending.push(modal);
+    });
+    if (!pending.length) return;
+
+    /* A previous modal may have been replaced without a Bootstrap hide cycle. */
+    document.querySelectorAll(".modal-backdrop").forEach(function (backdrop) {
+      backdrop.remove();
+    });
+    document.body.classList.remove("modal-open");
+
+    pending.forEach(function (modal) {
+      if (window.bootstrap && window.bootstrap.Modal) {
+        window.bootstrap.Modal.getOrCreateInstance(modal).show();
+      } else {
+        modal.classList.add("show");
+        modal.style.display = "block";
+        document.body.classList.add("modal-open");
+      }
+    });
+  }
+
+  function closeModals() {
+    document.querySelectorAll("#modal-root .modal").forEach(function (modal) {
+      if (window.bootstrap && window.bootstrap.Modal) {
+        var instance = window.bootstrap.Modal.getInstance(modal);
+        if (instance) {
+          instance.hide();
+          return;
+        }
+      }
+      modal.classList.remove("show");
+      modal.style.display = "none";
+    });
+    var backdrop = document.querySelector(".modal-backdrop");
+    if (backdrop) backdrop.remove();
+    document.body.classList.remove("modal-open");
+  }
+
+  function onShowToast(event) {
+    var detail = event.detail || {};
+    if (typeof window.showToast === "function") {
+      window.showToast(detail.message || "", detail.type || "info");
+    }
+  }
+
   function init() {
     updateToggleButton();
     document.querySelectorAll("#themeToggle").forEach(function (button) {
       button.addEventListener("click", function () {
         setTheme(currentTheme() === "dark" ? "light" : "dark");
       });
+    });
+    document.body.addEventListener("htmx:afterSwap", showSwappedModals);
+    document.body.addEventListener("closeModal", closeModals);
+    document.body.addEventListener("showToast", onShowToast);
+
+    /* A create submitted from a detail page has no table to retarget. */
+    document.body.addEventListener("htmx:targetError", function (event) {
+      var detail = event.detail || {};
+      if (detail.target === "#product-table" && window.location.pathname.startsWith("/products/")) {
+        window.location.assign("/products");
+      }
     });
   }
 

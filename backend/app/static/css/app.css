@@ -479,3 +479,29 @@ body {
   font-size: 0.9em;
   letter-spacing: 0.01em;
 }
+
+/* Modals */
+#modal-root .modal-content {
+  background: var(--sp-surface);
+  color: var(--bs-body-color);
+  border: 1px solid var(--sp-border);
+  border-radius: 0.9rem;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.2);
+}
+
+#modal-root .modal-header,
+#modal-root .modal-footer {
+  border-color: var(--sp-border);
+}
+
+#modal-root .form-check {
+  padding-top: 0.4rem;
+}
+
+#modal-root .alert {
+  margin-bottom: 1rem;
+}
+
+.btn-group-sm > .btn {
+  white-space: nowrap;
+}

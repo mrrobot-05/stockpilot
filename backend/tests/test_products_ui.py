@@ -1,4 +1,24 @@
+import json
+
 from fastapi.testclient import TestClient
+
+
+def product_form_data(quantity: str | None = "7", **overrides: str) -> dict[str, str]:
+    data = {
+        "sku": "FORM-1",
+        "name": "Form Product",
+        "description": "Created through the modal",
+        "category_id": "",
+        "supplier_id": "",
+        "cost_price": "5.00",
+        "sell_price": "10.00",
+        "reorder_level": "2",
+        "is_active": "on",
+    }
+    if quantity is not None:
+        data["quantity"] = quantity
+    data.update(overrides)
+    return data
 
 
 def setup_products(client: TestClient) -> tuple[dict, dict, list[dict]]:
@@ -48,6 +68,10 @@ def test_products_list_renders(client: TestClient) -> None:
         'id="product-table"',
         'hx-target="#product-table"',
         "sp-sort-link",
+        'id="modal-root"',
+        'hx-get="/products/new"',
+        'hx-get="/products/1/edit"',
+        'hx-get="/products/1/delete"',
     ):
         assert needle in html, needle
 
@@ -157,6 +181,10 @@ def test_product_detail_renders_movements(client: TestClient) -> None:
         "IN",
         "OUT",
         "$12.50",
+        'id="modal-root"',
+        f'hx-get="/products/{product_id}/edit"',
+        f'hx-get="/products/{product_id}/delete"',
+        'hx-get="/products/new"',
     ):
         assert needle in html, needle
 
@@ -168,11 +196,131 @@ def test_product_detail_404(client: TestClient) -> None:
     assert "Product not found" in response.text
 
 
+def test_create_product_from_form_updates_table(client: TestClient) -> None:
+    category, supplier, _ = setup_products(client)
+
+    response = client.post(
+        "/products",
+        data=product_form_data(
+            sku="FORM-1",
+            name="Form Product",
+            category_id=str(category["id"]),
+            supplier_id=str(supplier["id"]),
+        ),
+    )
+
+    assert response.status_code == 200
+    assert 'id="product-table"' in response.text
+    assert "FORM-1" in response.text
+    assert response.headers["hx-retarget"] == "#product-table"
+    assert response.headers["hx-reswap"] == "outerHTML"
+    trigger = json.loads(response.headers["hx-trigger"])
+    assert "closeModal" in trigger
+    assert trigger["showToast"]["type"] == "success"
+
+    page = client.get("/api/products", params={"q": "FORM-1"}).json()
+    assert page["total"] == 1
+    assert page["items"][0]["quantity"] == 7
+
+
+def test_create_duplicate_sku_renders_modal_error(client: TestClient) -> None:
+    setup_products(client)
+
+    response = client.post("/products", data=product_form_data(sku="SKU-A"))
+
+    assert response.status_code == 200
+    assert "A product with this SKU already exists" in response.text
+    assert 'id="productFormModal"' in response.text
+    assert 'id="product-table"' not in response.text
+    assert client.get("/api/products").json()["total"] == 3
+
+
+def test_edit_product_from_form_updates(client: TestClient) -> None:
+    _, _, products = setup_products(client)
+    product_id = products[0]["id"]
+
+    modal = client.get(f"/products/{product_id}/edit")
+    assert modal.status_code == 200
+    assert 'id="productFormModal"' in modal.text
+    assert 'name="quantity"' not in modal.text
+    assert "Alpha Widget" in modal.text
+
+    response = client.post(
+        f"/products/{product_id}/edit",
+        data=product_form_data(quantity=None, sku="SKU-A2", name="Alpha Updated"),
+    )
+
+    assert response.status_code == 200
+    assert "SKU-A2" in response.text
+    assert response.headers["hx-retarget"] == "#product-table"
+    updated = client.get(f"/api/products/{product_id}").json()
+    assert updated["name"] == "Alpha Updated"
+    assert updated["quantity"] == 20
+
+
+def test_edit_form_rejects_quantity(client: TestClient) -> None:
+    _, _, products = setup_products(client)
+    product_id = products[0]["id"]
+
+    response = client.post(
+        f"/products/{product_id}/edit",
+        data=product_form_data(quantity="5", sku="SKU-A"),
+    )
+
+    assert response.status_code == 200
+    assert "Use the stock movements API to change quantity" in response.text
+    assert 'id="productFormModal"' in response.text
+    assert client.get(f"/api/products/{product_id}").json()["quantity"] == 20
+
+
+def test_delete_product_from_confirm_removes(client: TestClient) -> None:
+    _, _, products = setup_products(client)
+    product_id = products[2]["id"]
+
+    modal = client.get(f"/products/{product_id}/delete")
+    assert modal.status_code == 200
+    assert 'id="productDeleteModal"' in modal.text
+
+    response = client.post(f"/products/{product_id}/delete")
+
+    assert response.status_code == 200
+    assert "SKU-C" not in response.text
+    assert response.headers["hx-retarget"] == "#product-table"
+    assert "closeModal" in json.loads(response.headers["hx-trigger"])
+    assert client.get(f"/api/products/{product_id}").status_code == 404
+
+
+def test_delete_with_movements_returns_conflict_in_modal(client: TestClient) -> None:
+    _, _, products = setup_products(client)
+    product_id = products[0]["id"]
+    movement = client.post(
+        f"/api/products/{product_id}/movements",
+        json={"movement_type": "OUT", "quantity": 1},
+    )
+    assert movement.status_code == 201
+
+    response = client.post(f"/products/{product_id}/delete")
+
+    assert response.status_code == 200
+    assert "Product has stock movements and cannot be deleted" in response.text
+    assert 'id="productDeleteModal"' in response.text
+    assert client.get(f"/api/products/{product_id}").status_code == 200
+
+
 def test_products_ui_has_no_legacy_branding(client: TestClient) -> None:
     _, _, products = setup_products(client)
+    product_id = products[0]["id"]
     legacy_brand = "tel" + "usko"
 
-    for path in ("/products", f"/products/{products[0]['id']}", "/products/999999"):
+    paths = (
+        "/products",
+        "/products/new",
+        f"/products/{product_id}",
+        f"/products/{product_id}/edit",
+        f"/products/{product_id}/delete",
+        "/products/999999",
+    )
+    for path in paths:
         response = client.get(path)
         assert response.status_code in (200, 404)
         assert legacy_brand not in response.text.lower()

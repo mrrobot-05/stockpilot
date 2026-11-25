@@ -82,9 +82,19 @@
               <td class="text-end oc-num">{{ product.cost_price|money }}</td>
               <td class="text-end oc-num">{{ product.sell_price|money }}</td>
               <td class="text-end">
-                <a class="btn btn-sm btn-outline-primary" href="/products/{{ product.id }}">
-                  View
-                </a>
+                <div class="btn-group btn-group-sm" role="group" aria-label="Actions for {{ product.name }}">
+                  <a class="btn btn-outline-primary" href="/products/{{ product.id }}">View</a>
+                  <button type="button" class="btn btn-outline-secondary"
+                    hx-get="/products/{{ product.id }}/edit"
+                    hx-target="#modal-root"
+                    hx-swap="innerHTML"
+                    aria-label="Edit {{ product.name }}">Edit</button>
+                  <button type="button" class="btn btn-outline-danger"
+                    hx-get="/products/{{ product.id }}/delete"
+                    hx-target="#modal-root"
+                    hx-swap="innerHTML"
+                    aria-label="Delete {{ product.name }}">Delete</button>
+                </div>
               </td>
             </tr>
           {% endfor %}

@@ -1,0 +1,41 @@
+<div
+  class="modal fade"
+  id="productDeleteModal"
+  tabindex="-1"
+  aria-labelledby="productDeleteModalTitle"
+  aria-modal="true"
+  role="dialog"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h5" id="productDeleteModalTitle">Delete product</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        {% if error %}
+          <div class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>{{ error }}
+          </div>
+          <p class="small text-body-secondary mb-0">
+            Products with stock movement history cannot be deleted. Keep the product and adjust
+            its stock through movements instead.
+          </p>
+        {% else %}
+          <p class="mb-0">
+            Delete <strong>{{ product.name }}</strong>
+            (<span class="sp-sku">{{ product.sku }}</span>)? This cannot be undone.
+          </p>
+        {% endif %}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form hx-post="/products/{{ product_id }}/delete" hx-target="#modal-root" hx-swap="innerHTML">
+          <button type="submit" class="btn btn-danger" {% if error %}disabled{% endif %}>
+            <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete product
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

@@ -19,6 +19,18 @@
       </p>
     </div>
     <div class="d-flex flex-wrap gap-2">
+      <button class="btn btn-primary" type="button"
+        hx-get="/products/new" hx-target="#modal-root" hx-swap="innerHTML">
+        <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add product
+      </button>
+      <button class="btn btn-outline-secondary" type="button"
+        hx-get="/products/{{ product.id }}/edit" hx-target="#modal-root" hx-swap="innerHTML">
+        <i class="bi bi-pencil me-1" aria-hidden="true"></i>Edit
+      </button>
+      <button class="btn btn-outline-danger" type="button"
+        hx-get="/products/{{ product.id }}/delete" hx-target="#modal-root" hx-swap="innerHTML">
+        <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete
+      </button>
       <a class="btn btn-outline-secondary" href="/products">
         <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back to products
       </a>
@@ -138,4 +150,6 @@
       </div>
     {% endif %}
   </div>
+
+  <div id="modal-root"></div>
 {% endblock %}
