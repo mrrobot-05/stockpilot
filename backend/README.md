@@ -49,10 +49,16 @@ To create a new migration after changing a model:
 ## Run
 
 ```powershell
-.\.venv\Scripts\uvicorn app.main:app --reload
+.\.venv\Scripts\uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 Interactive API docs: http://127.0.0.1:8000/docs
+
+> **Local only.** v1 has no authentication and no CSRF tokens. Keep the server bound to
+> `127.0.0.1` and do not expose it to an untrusted network. State-changing requests
+> (`POST`, `PATCH`, `PUT`, `DELETE`) that carry an `Origin` or `Referer` header from a
+> different host are rejected with `403`; requests without those headers (CLI tools,
+> scripts and tests) are allowed. `DEBUG` defaults to `false`.
 
 ## UI
 
