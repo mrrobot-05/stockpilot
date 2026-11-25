@@ -72,14 +72,14 @@ stockpilot/
 | 2 | Inventory domain | categories, suppliers, movements, stats, CSV, seed + tests |
 | 3 | UI foundation | base template, Bootstrap theme, HTMX, layout, dashboard |
 | 4 | Screens | products, movements, categories, suppliers, settings, alerts |
-| 5 | Polish & docs | responsive/a11y, full tests, README, zero Telusko |
+| 5 | Polish & docs | responsive/a11y, full tests, README, zero legacy branding |
 | 6 | AI v1.1 | chat assistant, forecasting, OCR, anomaly detection |
 
 ## Definition of done (v1)
 - `pytest` and `ruff check` pass in `backend/`
 - app runs with `uvicorn app.main:app --reload` from `backend/`
 - all pages responsive at 360/768/1280 and keyboard navigable
-- no `Telusko` string in tracked files
+- no legacy branding string in tracked files
 - no secrets in tracked files
 - README has setup, screenshots, and API notes
 

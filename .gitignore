@@ -17,4 +17,5 @@ Thumbs.db
 .vscode/
 dist/
 build/
+*.egg-info/
 *.log
