@@ -3,8 +3,8 @@
 **Inventory, on autopilot.**
 
 [![CI](https://github.com/mrrobot-05/stockpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/mrrobot-05/stockpilot/actions/workflows/ci.yml)
-![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://github.com/mrrobot-05/stockpilot/blob/main/backend/pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/mrrobot-05/stockpilot/blob/main/LICENSE)
 
 StockPilot is a local-first inventory manager for tracking products, stock levels, categories,
 suppliers and stock movements. It ships as one FastAPI app with a server-rendered Bootstrap UI
@@ -122,7 +122,8 @@ migrations against a scratch database, set `DATABASE_URL` to a temporary SQLite 
 
 `.github/workflows/ci.yml` runs those checks on Python 3.12 and 3.13 for pushes and pull
 requests, plus `node --check` on the app's JavaScript. No build step or runtime Node
-dependency is required to run StockPilot itself.
+dependency is required to run StockPilot itself. Repository setup and push steps are in
+[docs/PUBLISHING.md](docs/PUBLISHING.md).
 
 ## Screenshots
 
@@ -141,6 +142,7 @@ stockpilot/
 ├── docs/
 │   ├── screenshots/README.md  # how to capture local screenshots
 │   ├── ARCHITECTURE.md     # request flow, data model and security posture
+│   ├── PUBLISHING.md       # GitHub description, topics and push checklist
 │   └── README.md           # documentation index
 ├── CHANGELOG.md            # release notes
 ├── CONTRIBUTING.md         # setup and contribution guide
