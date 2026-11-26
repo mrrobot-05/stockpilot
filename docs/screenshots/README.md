@@ -1,7 +1,8 @@
 # Screenshots
 
-This repository intentionally does not ship screenshots. If you would like to add them for a
-fork or a release note, capture them locally with the real app:
+This folder contains 1440×1000 PNGs of all six v1 pages, captured from seeded demo data with
+headless Microsoft Edge. To regenerate them (or capture a different theme/data set), use the
+real app locally:
 
 1. From `backend/`, create and seed a fresh database:
 
@@ -25,9 +26,17 @@ fork or a release note, capture them locally with the real app:
    | `/movements` | Type filter and the record-movement modal |
    | `/settings` | Theme control and information cards |
 
-4. Capture at **1280×800** (desktop) and **360×740** (mobile). Use your browser's dev tools
-   device toolbar or a screenshot extension; no Node/npm build is needed.
-5. Optionally toggle dark mode and capture the dashboard again.
+4. Capture at **1440×1000** for parity with the committed images (or **360×740** for a mobile
+   check). Headless Edge/Chrome works well with a CDN-friendly time budget:
+
+   ```powershell
+   msedge --headless=new --disable-gpu --hide-scrollbars --window-size=1440,1000 `
+     --virtual-time-budget=8000 --screenshot=docs\screenshots\dashboard.png `
+     http://127.0.0.1:8000/dashboard
+   ```
+
+5. Optionally toggle the theme in the top bar and capture again; screenshots inherit the
+   browser's colour-scheme preference when no `sp-theme` value is stored.
 
 Save files here using descriptive names such as `dashboard-desktop.png` and
 `products-mobile.png`, then reference them from a release note. Do not commit `.env`,

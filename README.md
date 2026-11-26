@@ -127,9 +127,15 @@ dependency is required to run StockPilot itself. Repository setup and push steps
 
 ## Screenshots
 
-Screenshots are not committed to this repository. See
-[docs/screenshots/README.md](docs/screenshots/README.md) for the exact pages and viewport sizes
-to capture locally if you want to add your own.
+Captured at 1440×1000 from the seeded demo data (dark theme):
+
+![StockPilot dashboard](docs/screenshots/dashboard.png)
+
+![StockPilot products list](docs/screenshots/products.png)
+
+The full set also includes `movements.png`, `categories.png`, `suppliers.png` and
+`settings.png` in [docs/screenshots/](docs/screenshots/). See
+[docs/screenshots/README.md](docs/screenshots/README.md) for how to regenerate them locally.
 
 ## Structure
 
