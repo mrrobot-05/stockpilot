@@ -103,14 +103,21 @@ The suite covers the JSON API, services, migrations, UI pages and security guard
 migrations against a scratch database, set `DATABASE_URL` to a temporary SQLite file and run
 `python -m alembic upgrade head` followed by `python -m alembic check`.
 
+`.github/workflows/ci.yml` runs those checks on Python 3.12 and 3.13 for pushes and pull
+requests, plus `node --check` on the app's JavaScript. No build step or runtime Node
+dependency is required to run StockPilot itself.
+
 ## Structure
 
 ```
 stockpilot/
+├── .github/
+│   └── workflows/ci.yml    # Python 3.12/3.13 test, lint and migration checks
+├── docs/
+│   └── README.md           # documentation index
 ├── README.md               # this file
 ├── PLAN.md                 # build plan and v1.1 roadmap
 ├── .gitignore
-├── archive/                # legacy tutorial code (git-ignored)
 └── backend/
     ├── pyproject.toml, requirements.lock, .env.example
     ├── alembic.ini, alembic/
@@ -119,7 +126,7 @@ stockpilot/
     │   ├── core/config.py
     │   ├── db/, models/, schemas/, routers/, services/
     │   ├── templates/      # base, pages and partials (modals, tables)
-    │   └── static/         # css/app.css, js/app.js
+    │   └── static/         # css/app.css, js/app.js, favicon.svg
     ├── scripts/seed.py
     └── tests/              # API, domain, migrations and UI tests
 ```

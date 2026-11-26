@@ -21,16 +21,19 @@ a single FastAPI process with no Node build step. See `README.md` for setup and 
 - Theme: light + dark toggle (`data-bs-theme`), persisted in `localStorage`
 - Currency: USD in v1; a real settings model with configurable currency is deferred
 - Serving: bind `127.0.0.1`; `DEBUG=false` by default; same-origin guard on state-changing requests
-- Legacy tutorial folders: `archive/` (git-ignored; delete after v1 ships)
+- Legacy tutorial folders were removed before publication; no legacy code remains
 
 ## Architecture
 
 ```
 stockpilot/
+├── .github/
+│   └── workflows/ci.yml    # Python 3.12/3.13 CI matrix
+├── docs/
+│   └── README.md           # documentation index
 ├── README.md               # complete v1 documentation
 ├── PLAN.md                 # this plan
 ├── .gitignore
-├── archive/                # legacy tutorial code (ignored)
 └── backend/
     ├── pyproject.toml, requirements.lock, .env.example
     ├── alembic.ini, alembic/
@@ -43,7 +46,7 @@ stockpilot/
     │   ├── routers/        # /api + server-rendered pages
     │   ├── services/       # domain logic, stats, CSV export
     │   ├── templates/      # base, pages, partials (tables, modals)
-    │   └── static/         # css/app.css, js/app.js
+    │   └── static/         # css/app.css, js/app.js, favicon.svg
     ├── scripts/seed.py
     └── tests/              # API, domain, migrations and UI tests
 ```
