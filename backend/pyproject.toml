@@ -6,7 +6,22 @@ build-backend = "setuptools.build_meta"
 name = "stockpilot"
 version = "0.1.0"
 description = "StockPilot inventory management API and UI"
+readme = "README.md"
 requires-python = ">=3.11"
+authors = [{ name = "Aditya Kale", email = "adityakale5002@gmail.com" }]
+license = { text = "MIT" }
+keywords = ["inventory", "stock", "fastapi", "sqlalchemy", "bootstrap", "htmx", "sqlite"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Framework :: FastAPI",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Office/Business",
+]
 dependencies = [
   "fastapi>=0.115",
   "uvicorn[standard]>=0.30",
@@ -16,6 +31,11 @@ dependencies = [
   "jinja2>=3.1",
   "python-multipart>=0.0.9",
 ]
+
+[project.urls]
+Homepage = "https://github.com/mrrobot-05/stockpilot"
+Repository = "https://github.com/mrrobot-05/stockpilot"
+Issues = "https://github.com/mrrobot-05/stockpilot/issues"
 
 [project.optional-dependencies]
 dev = [

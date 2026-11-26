@@ -2,6 +2,10 @@
 
 **Inventory, on autopilot.**
 
+[![CI](https://github.com/mrrobot-05/stockpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/mrrobot-05/stockpilot/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 StockPilot is a local-first inventory manager for tracking products, stock levels, categories,
 suppliers and stock movements. It ships as one FastAPI app with a server-rendered Bootstrap UI
 and a JSON API for scripts and future AI clients. Version 1 is complete.
@@ -23,6 +27,19 @@ and a JSON API for scripts and future AI clients. Version 1 is complete.
 - **Demo data** — idempotent seed script and Alembic migrations.
 - **UI details** — light/dark theme with persistence, responsive layout, HTMX table swaps,
   Bootstrap modals, toasts and thoughtful empty states.
+
+## Engineering highlights
+
+- **Atomic ledger** — stock is changed with one conditional SQL `UPDATE`; the ledger's
+  `stock_after` is read back from the committed row, so stock and history cannot drift.
+- **Case-insensitive uniqueness** — expression indexes on `lower(sku)` and `lower(name)` back
+  the API's `409` checks for products, categories and suppliers.
+- **Server-rendered HTMX UI** — Jinja2 pages and partials with Bootstrap modals and toasts; no
+  JavaScript framework or build step.
+- **177 tests** — API, services, migrations, UI and security guards, with ruff linting and a
+  Python 3.12/3.13 CI matrix.
+- **Same-origin guard** — state-changing requests with a foreign `Origin`/`Referer` are
+  rejected with `403`.
 
 ## Stack
 
@@ -107,16 +124,30 @@ migrations against a scratch database, set `DATABASE_URL` to a temporary SQLite 
 requests, plus `node --check` on the app's JavaScript. No build step or runtime Node
 dependency is required to run StockPilot itself.
 
+## Screenshots
+
+Screenshots are not committed to this repository. See
+[docs/screenshots/README.md](docs/screenshots/README.md) for the exact pages and viewport sizes
+to capture locally if you want to add your own.
+
 ## Structure
 
 ```
 stockpilot/
 ├── .github/
+│   ├── ISSUE_TEMPLATE/     # bug report and feature request forms
+│   ├── PULL_REQUEST_TEMPLATE.md
 │   └── workflows/ci.yml    # Python 3.12/3.13 test, lint and migration checks
 ├── docs/
+│   ├── screenshots/README.md  # how to capture local screenshots
+│   ├── ARCHITECTURE.md     # request flow, data model and security posture
 │   └── README.md           # documentation index
+├── CHANGELOG.md            # release notes
+├── CONTRIBUTING.md         # setup and contribution guide
+├── LICENSE                 # MIT
 ├── README.md               # this file
 ├── PLAN.md                 # build plan and v1.1 roadmap
+├── SECURITY.md             # local-only policy and private reporting
 ├── .gitignore
 └── backend/
     ├── pyproject.toml, requirements.lock, .env.example
